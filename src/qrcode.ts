@@ -14,6 +14,25 @@ export type QrDataUrlOptions = {
   scale?: number
 }
 
+// The raw module matrix of an encoded QR code: one entry per module, 1 for a
+// dark module and 0 for a light one. The sharing side paints it on a canvas,
+// and the tests use it to build an image that the scanner can read back.
+export type QrModuleMatrix = {
+  size: number
+  data: Uint8Array
+}
+
+export function manifestToQrModuleMatrix(
+  json: string,
+  options: QrDataUrlOptions = {},
+): QrModuleMatrix {
+  const qr = QRCode.create(json, {
+    errorCorrectionLevel: options.errorCorrectionLevel ?? 'M',
+  })
+
+  return { size: qr.modules.size, data: qr.modules.data }
+}
+
 export async function manifestToQrDataUrl(
   json: string,
   options: QrDataUrlOptions = {},

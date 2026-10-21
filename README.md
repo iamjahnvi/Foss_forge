@@ -29,6 +29,7 @@ npm run lint
 - **Local Inventory** — scan the ZIM archives you already own. The browser reads the 80-byte archive header and the trailing checksum, and records the UUID, format version, article count, language guess and size. Files never leave the machine. Scanned archives can be added to a collection as a resource.
 - **Import / Export** — export a collection as a JSON manifest, and import a manifest to preview it. The preview runs the compatibility report before anything is saved.
 - **Share QR** — encode the whole manifest in a QR code. Another device can scan it, recover the JSON and import the collection.
+- **Import from a QR code** — scan a shared code with the camera, or pick a picture of one. The decoded manifest is validated and reported on exactly like a manifest that was read from a file. The decoder is loaded only when a code is actually scanned.
 
 ## Compatibility report
 
@@ -45,6 +46,10 @@ Every resource ends up in one of five states:
 | Unknown / incompatible | The resource records no ZIM identity, or the local archive uses a format version the app does not understand. |
 
 The engine lives in [`src/compatibility.ts`](./src/compatibility.ts) and its test evidence in [`src/compatibility.test.ts`](./src/compatibility.test.ts).
+
+## QR sharing
+
+The share dialog encodes the whole manifest in a QR code, so a second device can take the collection without a network connection. The receiving side reads the code with jsQR, from the camera or from a picture the user picked, and the decoded text goes through the same validation and the same compatibility report as a manifest that was read from a file. The decoder lives in [`src/qrDecoder.ts`](./src/qrDecoder.ts), with its test evidence in [`src/qrDecoder.test.ts`](./src/qrDecoder.test.ts).
 
 ## API
 

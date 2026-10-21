@@ -4,6 +4,7 @@ import { CollectionEditor } from './CollectionEditor'
 import { CompatibilityReportView } from './CompatibilityReport'
 import { buildCompatibilityReport } from './compatibility'
 import { LocalInventory } from './LocalInventory'
+import { QrScanner } from './QrScanner'
 import { QrShareDialog } from './QrShareDialog'
 import {
   addImportedCollection,
@@ -136,6 +137,23 @@ function App() {
         error instanceof Error
           ? error.message
           : 'The selected file could not be read. Please choose a valid JSON manifest.',
+      )
+    }
+  }
+
+  // A QR code carries the manifest itself, so it is read and then handled
+  // exactly like a manifest that was read from a file.
+  function handleDecodedQr(text: string) {
+    setPendingImport(null)
+    setImportError('')
+    setImportMessage('')
+    try {
+      setPendingImport(parseManifest(text))
+    } catch (error) {
+      setImportError(
+        error instanceof Error
+          ? error.message
+          : 'The QR code does not carry a valid JSON manifest.',
       )
     }
   }
@@ -409,6 +427,8 @@ function App() {
                   <Upload aria-hidden="true" size={18} />
                   Choose JSON manifest
                 </button>
+
+                <QrScanner onDecoded={handleDecodedQr} />
 
                 {importError && (
                   <p role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-800">

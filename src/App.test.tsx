@@ -4,6 +4,30 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import App from './App'
 import { ZIM_HEADER_SIZE, ZIM_MAGIC } from './zim'
 
+// The QR scanner is exercised through a stub, so the test does not need a
+// camera. The stub returns the manifest a shared QR code would carry.
+vi.mock('./qrDecoder', () => ({
+  decodeQrFromImageFile: vi.fn(async () =>
+    JSON.stringify({
+      schemaVersion: 2,
+      id: 'collection-qr',
+      name: 'Shared collection',
+      description: '',
+      createdAt: '2026-10-21T10:00:00Z',
+      resources: [
+        {
+          id: 'resource-qr',
+          title: 'Shared archive',
+          language: 'en',
+          zimUuid: '01234567-89ab-cdef-0123-456789abcdef',
+          zimVersion: '6.1',
+        },
+      ],
+    }),
+  ),
+  decodeQrFromVideo: vi.fn(() => null),
+}))
+
 beforeAll(() => {
   // jsdom does not implement the modal dialog methods.
   if (!HTMLDialogElement.prototype.showModal) {
@@ -162,8 +186,7 @@ describe('compatibility report', () => {
     expect(screen.getByText(/No local archives are scanned yet/)).toBeTruthy()
   })
 
-  it('marks an archive that was scanned locally as present and verified', async () => {
-    render(<App />)
+  it('marks an archive that was scanned locally as present and verified', async () => {    render(<App />)
 
     await createCollection('Offline set')
     fireEvent.click(screen.getByRole('button', { name: 'Local Inventory' }))
@@ -177,6 +200,20 @@ describe('compatibility report', () => {
     await importManifest()
 
     expect(screen.getAllByText('Present & verified').length).toBeGreaterThan(0)
+  })
+
+  it('imports a collection from a scanned QR code and reports its compatibility', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Import / Export' }))
+
+    fireEvent.change(screen.getByLabelText('Choose a picture of a QR code'), {
+      target: { files: [new File(['image'], 'qr.png', { type: 'image/png' })] },
+    })
+
+    await screen.findByText('Ready to import')
+    expect(screen.getByText('Shared collection')).toBeTruthy()
+    expect(screen.getByText('Compatibility with the local inventory')).toBeTruthy()
+    expect(screen.getAllByText('Missing').length).toBeGreaterThan(0)
   })
 })
 
