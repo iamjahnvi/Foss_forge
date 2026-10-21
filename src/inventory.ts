@@ -87,9 +87,11 @@ export function inventoryEntryToResource(entry: InventoryEntry): CollectionResou
     sizeBytes: entry.sizeBytes,
     filename: entry.fileName,
     zimUuid: entry.zimUuid,
+    zimVersion: entry.version,
   }
   if (entry.description) resource.description = entry.description
   if (entry.sourceUrl) resource.sourceUrl = entry.sourceUrl
+  if (entry.checksum) resource.zimChecksum = entry.checksum
   return resource
 }
 

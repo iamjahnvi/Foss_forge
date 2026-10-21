@@ -62,10 +62,28 @@ describe('backend manifest validation', () => {
   })
 
   it('rejects unsupported schema versions', () => {
-    const result = validateManifestData({ ...validManifest, schemaVersion: 2 })
+    const result = validateManifestData({ ...validManifest, schemaVersion: 3 })
 
     expect(result.valid).toBe(false)
-    if (!result.valid) expect(result.errors[0]).toContain('supports version 1')
+    if (!result.valid) expect(result.errors[0]).toContain('supports versions 1 and 2')
+  })
+
+  it('accepts the version 2 fields that describe a ZIM archive', () => {
+    const manifest = {
+      ...validManifest,
+      schemaVersion: 2,
+      resources: [
+        {
+          ...validManifest.resources[0],
+          zimVersion: '6.1',
+          zimChecksum: 'b'.repeat(32),
+        },
+      ],
+    }
+
+    const result = validateManifestData(manifest)
+
+    expect(result.valid).toBe(true)
   })
 
   it('rejects duplicate resource IDs', () => {

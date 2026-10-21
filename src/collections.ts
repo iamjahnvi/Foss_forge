@@ -1,10 +1,11 @@
 import {
+  CURRENT_SCHEMA_VERSION,
   UNDETERMINED_LANGUAGE,
   type Collection,
   type CollectionManifest,
   type CollectionResource,
 } from './manifest'
-import { guessLanguage } from './zim'
+import { formatZimVersion, guessLanguage } from './zim'
 
 export type { Collection }
 
@@ -31,7 +32,7 @@ export function createCollection(
 // means adding `schemaVersion`.
 export function collectionToManifest(collection: Collection): CollectionManifest {
   return {
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     id: collection.id,
     name: collection.name,
     description: collection.description,
@@ -141,15 +142,18 @@ export function resourceFromZimFile(
 ): CollectionResource {
   const title = overrides.title ?? file.name.replace(/\.zim$/i, '')
   const language = overrides.language || guessLanguage(file.name)
-  return {
+  const resource: CollectionResource = {
     id: `zim-${header.uuid}`,
     title,
     language: language || UNDETERMINED_LANGUAGE,
-    description: overrides.description,
     sizeBytes: file.size,
     filename: file.name,
     zimUuid: header.uuid,
-    sourceUrl: overrides.sourceUrl,
-    sha256: overrides.sha256,
+    zimVersion: formatZimVersion(header),
   }
+  if (overrides.description) resource.description = overrides.description
+  if (overrides.sourceUrl) resource.sourceUrl = overrides.sourceUrl
+  if (overrides.sha256) resource.sha256 = overrides.sha256
+  if (overrides.zimChecksum) resource.zimChecksum = overrides.zimChecksum
+  return resource
 }

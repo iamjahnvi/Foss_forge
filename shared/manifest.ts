@@ -9,12 +9,20 @@ export type CollectionResource = {
   sizeBytes?: number
   filename?: string
   zimUuid?: string
+  // ZIM format version of the archive, for example "6.1". Version 2 of the
+  // manifest format records it so a receiving app can tell a different build
+  // of the same archive apart from the archive itself.
+  zimVersion?: string
+  // The MD5 checksum stored inside the ZIM archive, as 32 hexadecimal
+  // characters. It is the cheapest way to prove that a local file is
+  // byte-for-byte the archive the manifest describes.
+  zimChecksum?: string
   sourceUrl?: string
   sha256?: string
 }
 
 export type CollectionManifest = {
-  schemaVersion: 1
+  schemaVersion: 1 | 2
   id: string
   name: string
   description: string
@@ -40,6 +48,13 @@ export type ManifestValidationResult =
 // The manifest schema requires a non-empty language code. "und" is the ISO
 // 639-3 code for an undetermined language.
 export const UNDETERMINED_LANGUAGE = 'und'
+
+// The manifest format version this app writes. Version 1 manifests are still
+// accepted, but they cannot describe the ZIM format version or the archive
+// checksum, so their resources can only be matched by their ZIM identity.
+export const CURRENT_SCHEMA_VERSION = 2
+
+export const SUPPORTED_SCHEMA_VERSIONS = [1, 2] as const
 
 const ajv = new Ajv({ allErrors: true })
 
@@ -95,12 +110,12 @@ export function validateManifestData(data: unknown): ManifestValidationResult {
     typeof data === 'object' &&
     data !== null &&
     'schemaVersion' in data &&
-    data.schemaVersion !== 1
+    !SUPPORTED_SCHEMA_VERSIONS.includes(data.schemaVersion as 1 | 2)
   ) {
     return {
       valid: false,
       errors: [
-        `Unsupported manifest schema version "${String(data.schemaVersion)}". This app supports version 1.`,
+        `Unsupported manifest schema version "${String(data.schemaVersion)}". This app supports versions ${SUPPORTED_SCHEMA_VERSIONS.join(' and ')}.`,
       ],
     }
   }
@@ -143,7 +158,7 @@ export function validateCollectionList(data: unknown): CollectionListValidationR
   data.forEach((entry, index) => {
     const result = validateManifestData(
       typeof entry === 'object' && entry !== null
-        ? { ...(entry as Record<string, unknown>), schemaVersion: 1 }
+        ? { ...(entry as Record<string, unknown>), schemaVersion: CURRENT_SCHEMA_VERSION }
         : entry,
     )
     if (!result.valid) {

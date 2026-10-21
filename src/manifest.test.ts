@@ -4,11 +4,12 @@ import {
   manifestFilename,
   parseManifest,
   serializeManifest,
+  CURRENT_SCHEMA_VERSION,
   type CollectionManifest,
 } from './manifest'
 
 const validManifest: CollectionManifest = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   id: 'collection-1',
   name: 'World history',
   description: 'A small reference collection.',
@@ -21,6 +22,8 @@ const validManifest: CollectionManifest = {
       sizeBytes: 1024,
       filename: 'history_en.zim',
       zimUuid: 'zim-uuid',
+      zimVersion: '6.1',
+      zimChecksum: 'a'.repeat(32),
       sourceUrl: 'https://catalogue.example.test/history',
       sha256: 'a'.repeat(64),
     },
@@ -28,8 +31,13 @@ const validManifest: CollectionManifest = {
 }
 
 describe('Kiwix Collections project manifests', () => {
-  it('accepts a valid version 1 manifest', () => {
+  it('accepts a valid version 2 manifest', () => {
     expect(parseManifest(JSON.stringify(validManifest))).toEqual(validManifest)
+  })
+
+  it('accepts a version 1 manifest', () => {
+    const version1 = { ...validManifest, schemaVersion: 1 }
+    expect(parseManifest(JSON.stringify(version1))).toEqual(version1)
   })
 
   it('reports missing required fields and invalid types', () => {
@@ -60,10 +68,20 @@ describe('Kiwix Collections project manifests', () => {
   })
 
   it('rejects unsupported schema versions', () => {
-    const unsupported = { ...validManifest, schemaVersion: 2 }
+    const unsupported = { ...validManifest, schemaVersion: 3 }
     expect(() => parseManifest(JSON.stringify(unsupported))).toThrow(
-      /supports version 1/,
+      /supports versions 1 and 2/,
     )
+  })
+
+  it('rejects malformed ZIM versions and checksums', () => {
+    const invalidVersion = structuredClone(validManifest)
+    invalidVersion.resources[0].zimVersion = 'six'
+    expect(() => parseManifest(JSON.stringify(invalidVersion))).toThrow(/pattern/)
+
+    const invalidChecksum = structuredClone(validManifest)
+    invalidChecksum.resources[0].zimChecksum = 'not-a-checksum'
+    expect(() => parseManifest(JSON.stringify(invalidChecksum))).toThrow(/pattern/)
   })
 
   it('preserves metadata through export and import', () => {
@@ -115,10 +133,12 @@ describe('Kiwix Collections project manifests', () => {
 
   it('round trips a collection that was built from the local inventory', () => {
     const collection = addImportedCollection(validManifest, [])
-    const exported = serializeManifest({ schemaVersion: 1, ...collection })
+    const exported = serializeManifest({ schemaVersion: CURRENT_SCHEMA_VERSION, ...collection })
     const imported = parseManifest(exported)
 
     expect(imported.resources[0].zimUuid).toBe('zim-uuid')
+    expect(imported.resources[0].zimVersion).toBe('6.1')
+    expect(imported.resources[0].zimChecksum).toBe('a'.repeat(32))
     expect(imported.resources[0].sha256).toBe('a'.repeat(64))
   })
 })

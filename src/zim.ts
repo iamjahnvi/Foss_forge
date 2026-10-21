@@ -123,6 +123,18 @@ export function isZimFileName(filename: string): boolean {
   return /\.zim$/i.test(filename)
 }
 
-export function formatZimVersion(header: ZimHeader): string {
+export function formatZimVersion(header: {
+  majorVersion: number
+  minorVersion: number
+}): string {
   return `${header.majorVersion}.${header.minorVersion}`
+}
+
+// ZIM format versions this app knows how to read. An archive with a newer
+// major version is reported as unknown instead of being silently accepted:
+// the header layout may have changed in ways the app cannot interpret.
+export const SUPPORTED_ZIM_MAJOR_VERSIONS = [5, 6]
+
+export function isSupportedZimVersion(majorVersion: number): boolean {
+  return SUPPORTED_ZIM_MAJOR_VERSIONS.includes(majorVersion)
 }

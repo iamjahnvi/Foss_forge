@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { BookOpen, Boxes, CircleHelp, Download, Plus, QrCode, Upload, X } from 'lucide-react'
 import { CollectionEditor } from './CollectionEditor'
+import { CompatibilityReportView } from './CompatibilityReport'
+import { buildCompatibilityReport } from './compatibility'
 import { LocalInventory } from './LocalInventory'
 import { QrShareDialog } from './QrShareDialog'
 import {
@@ -18,6 +20,7 @@ import {
   manifestFilename,
   parseManifest,
   serializeManifest,
+  CURRENT_SCHEMA_VERSION,
   type CollectionManifest,
   type CollectionResource,
 } from './manifest'
@@ -58,6 +61,16 @@ function App() {
     replaceCollections,
   } = useCollections()
   const inventory = useInventory()
+
+  // The compatibility report compares the manifest that is about to be imported
+  // with the archives this machine actually has.
+  const importReport = useMemo(
+    () =>
+      pendingImport
+        ? buildCompatibilityReport(pendingImport.resources, inventory.entries)
+        : null,
+    [pendingImport, inventory.entries],
+  )
 
   const openCollection = useMemo(
     () => collections.find((collection) => collection.id === openCollectionId) ?? null,
@@ -373,8 +386,9 @@ function App() {
                   Import / Export
                 </h2>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
-                  Import a Kiwix Collections version 1 JSON manifest to preview and add its
-                  metadata. Manifests contain references only, not ZIM file contents. A
+                  Import a Kiwix Collections JSON manifest to preview and add its
+                  metadata. The preview checks the manifest against the archives on this
+                  machine. Manifests contain references only, not ZIM file contents. A
                   collection can also be shared as a QR code from the Collections section.
                 </p>
               </div>
@@ -425,6 +439,12 @@ function App() {
                         This collection ID is already in use. A new ID will be assigned when
                         imported.
                       </p>
+                    )}
+                    {importReport && (
+                      <CompatibilityReportView
+                        report={importReport}
+                        inventoryCount={inventory.entries.length}
+                      />
                     )}
                     <button
                       type="button"
@@ -538,7 +558,16 @@ function App() {
 
       <QrShareDialog
         open={sharedManifest !== null}
-        manifest={sharedManifest ?? { schemaVersion: 1, id: '', name: '', description: '', createdAt: '', resources: [] }}
+        manifest={
+          sharedManifest ?? {
+            schemaVersion: CURRENT_SCHEMA_VERSION,
+            id: '',
+            name: '',
+            description: '',
+            createdAt: '',
+            resources: [],
+          }
+        }
         filename={sharedManifest ? manifestFilename(sharedManifest.name) : 'collection.json'}
         onClose={() => setSharedManifest(null)}
       />

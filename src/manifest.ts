@@ -10,6 +10,8 @@ export {
   serializeManifest,
   validateCollectionList,
   validateManifestData,
+  CURRENT_SCHEMA_VERSION,
+  SUPPORTED_SCHEMA_VERSIONS,
   UNDETERMINED_LANGUAGE,
 } from '../shared/manifest'
 

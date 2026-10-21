@@ -9,6 +9,7 @@ import {
   resourceFromZimFile,
   updateResource,
 } from './collections'
+import { CURRENT_SCHEMA_VERSION } from './manifest'
 
 describe('createCollection', () => {
   it('trims the collection name and description', () => {
@@ -125,7 +126,7 @@ describe('collectionToManifest', () => {
       resources: [{ id: 'a', title: 'A', language: 'en' }],
     }
     expect(collectionToManifest(collection)).toEqual({
-      schemaVersion: 1,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       id: 'collection-1',
       name: 'History',
       description: 'A reading list',
@@ -151,13 +152,18 @@ describe('resourceFromZimFile', () => {
       id: 'zim-aaaa1111-2222-3333-4444-555566667777',
       title: 'wikipedia_en_all',
       language: 'en',
-      description: undefined,
       sizeBytes: 4096,
       filename: 'wikipedia_en_all.zim',
       zimUuid: 'aaaa1111-2222-3333-4444-555566667777',
-      sourceUrl: undefined,
-      sha256: undefined,
+      zimVersion: '5.1',
     })
+  })
+
+  it('keeps the archive checksum when one is known', () => {
+    const file = { name: 'wikipedia_en_all.zim', size: 4096 } as File
+    const resource = resourceFromZimFile(file, header, { zimChecksum: 'a'.repeat(32) })
+
+    expect(resource.zimChecksum).toBe('a'.repeat(32))
   })
 
   it('honours explicit overrides', () => {

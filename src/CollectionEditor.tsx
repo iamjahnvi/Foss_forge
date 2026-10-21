@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   ArrowDown,
   ArrowUp,
@@ -9,7 +9,9 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { formatBytes, type InventoryEntry } from './inventory'
+import { CompatibilityBadge } from './CompatibilityReport'
+import { matchResource, type CompatibilityEntry } from './compatibility'
+import { formatBytes, inventoryEntryToResource, type InventoryEntry } from './inventory'
 import type { Collection, CollectionResource } from './manifest'
 
 type Props = {
@@ -42,6 +44,7 @@ function ResourceRow({
   resource,
   index,
   total,
+  compatibility,
   onUpdate,
   onRemove,
   onMove,
@@ -49,6 +52,7 @@ function ResourceRow({
   resource: CollectionResource
   index: number
   total: number
+  compatibility: CompatibilityEntry
   onUpdate: (patch: Partial<Omit<CollectionResource, 'id'>>) => void
   onRemove: () => void
   onMove: (offset: number) => void
@@ -154,6 +158,9 @@ function ResourceRow({
             {typeof resource.sizeBytes === 'number' ? `${formatBytes(resource.sizeBytes)} · ` : ''}
             {resource.zimUuid ? `UUID ${resource.zimUuid}` : 'no ZIM identity recorded'}
           </p>
+          <div className="mt-2">
+            <CompatibilityBadge entry={compatibility} />
+          </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -218,6 +225,19 @@ export function CollectionEditor({
     (entry) => !collection.resources.some((resource) => resource.id === entry.id),
   )
 
+  // Every resource is checked against the local inventory, so a collection
+  // shows at a glance which of its archives are on this machine.
+  const compatibility = useMemo(
+    () =>
+      new Map(
+        collection.resources.map((resource) => [
+          resource.id,
+          matchResource(resource, inventory),
+        ]),
+      ),
+    [collection.resources, inventory],
+  )
+
   function handleRename(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!name.trim()) {
@@ -254,14 +274,7 @@ export function CollectionEditor({
   function handleAddFromInventory() {
     const entry = inventory.find((item) => item.id === inventoryChoice)
     if (!entry) return
-    onAddResource(collection.id, {
-      id: entry.id,
-      title: entry.title,
-      language: entry.language,
-      sizeBytes: entry.sizeBytes,
-      filename: entry.fileName,
-      zimUuid: entry.zimUuid,
-    })
+    onAddResource(collection.id, inventoryEntryToResource(entry))
     setInventoryChoice('')
   }
 
@@ -409,6 +422,9 @@ export function CollectionEditor({
                 resource={resource}
                 index={index}
                 total={collection.resources.length}
+                compatibility={
+                  compatibility.get(resource.id) ?? matchResource(resource, inventory)
+                }
                 onUpdate={(patch) => onUpdateResource(collection.id, resource.id, patch)}
                 onRemove={() => onRemoveResource(collection.id, resource.id)}
                 onMove={(offset) => onMoveResource(collection.id, resource.id, offset)}

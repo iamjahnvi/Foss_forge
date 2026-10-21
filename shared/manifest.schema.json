@@ -1,15 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://foss-forge.local/schemas/kiwix-collections-manifest-v1.json",
+  "$id": "https://foss-forge.local/schemas/kiwix-collections-manifest-v2.json",
   "title": "Kiwix Collections project manifest",
-  "description": "Version 1 of the Kiwix Collections project's metadata-only collection manifest. This is not an official Kiwix standard.",
+  "description": "Version 2 of the Kiwix Collections project's metadata-only collection manifest. Version 2 adds the ZIM format version and the archive's own checksum to a resource, so a receiving app can check whether a local archive is the one the manifest describes. Version 1 manifests are still accepted. This is not an official Kiwix standard.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "name", "description", "createdAt", "resources"],
   "properties": {
     "schemaVersion": {
-      "const": 1,
-      "description": "Manifest format version."
+      "enum": [1, 2],
+      "description": "Manifest format version. Version 1 and version 2 manifests are accepted; exported manifests use version 2."
     },
     "id": {
       "type": "string",
@@ -57,6 +57,16 @@
           },
           "zimUuid": {
             "type": "string"
+          },
+          "zimVersion": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+){0,2}$",
+            "description": "ZIM format version of the archive, for example \"6.1\"."
+          },
+          "zimChecksum": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{32}$",
+            "description": "The MD5 checksum stored inside the ZIM archive, as 32 hexadecimal characters."
           },
           "sourceUrl": {
             "type": "string"

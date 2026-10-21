@@ -140,6 +140,8 @@ describe('inventoryEntryToResource', () => {
       sizeBytes: 4096,
       filename: 'history_en.zim',
       zimUuid: 'uuid-1',
+      zimVersion: '6.1',
+      zimChecksum: 'abc',
       sourceUrl: 'https://example.test/history.zim',
     })
   })
@@ -166,6 +168,8 @@ describe('inventoryEntryToResource', () => {
     expect(resource.language).toBe(UNDETERMINED_LANGUAGE)
     expect('description' in resource).toBe(false)
     expect('sourceUrl' in resource).toBe(false)
+    expect('zimChecksum' in resource).toBe(false)
+    expect(resource.zimVersion).toBe('5.1')
   })
 })
 

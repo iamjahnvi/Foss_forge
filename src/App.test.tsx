@@ -111,7 +111,72 @@ describe('collections', () => {
 
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('Share collection as a QR code')).toBeTruthy()
-    expect(within(dialog).getByText(/"schemaVersion": 1/)).toBeTruthy()
+    expect(within(dialog).getByText(/"schemaVersion": 2/)).toBeTruthy()
+  })
+})
+
+describe('compatibility report', () => {
+  const manifest = {
+    schemaVersion: 2,
+    id: 'collection-imported',
+    name: 'Imported set',
+    description: '',
+    createdAt: '2026-10-21T10:00:00Z',
+    resources: [
+      {
+        id: 'resource-present',
+        title: 'Present archive',
+        language: 'en',
+        zimUuid: '01234567-89ab-cdef-0123-456789abcdef',
+        zimVersion: '5.1',
+        zimChecksum: '0'.repeat(32),
+      },
+      {
+        id: 'resource-missing',
+        title: 'Missing archive',
+        language: 'en',
+        zimUuid: 'fedcba98-7654-3210-fedc-ba9876543210',
+      },
+    ],
+  }
+
+  async function importManifest() {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Import / Export' }))
+
+    const file = new File([JSON.stringify(manifest)], 'collection.json', {
+      type: 'application/json',
+    })
+    fireEvent.change(screen.getByLabelText('Choose a JSON collection manifest'), {
+      target: { files: [file] },
+    })
+
+    await screen.findByText('Ready to import')
+  }
+
+  it('reports which resources of an imported manifest are on this machine', async () => {
+    await importManifest()
+
+    expect(screen.getByText('Compatibility with the local inventory')).toBeTruthy()
+    expect(screen.getAllByText('Missing')).toHaveLength(2)
+    expect(screen.getByText(/No local archives are scanned yet/)).toBeTruthy()
+  })
+
+  it('marks an archive that was scanned locally as present and verified', async () => {
+    render(<App />)
+
+    await createCollection('Offline set')
+    fireEvent.click(screen.getByRole('button', { name: 'Local Inventory' }))
+    const file = buildZimFile('wikipedia_en_all.zim', '01234567-89ab-cdef-0123-456789abcdef')
+    fireEvent.change(screen.getByLabelText('Choose ZIM archives to scan'), {
+      target: { files: [file] },
+    })
+    await waitFor(() => expect(screen.getByText('wikipedia_en_all')).toBeTruthy())
+
+    cleanup()
+    await importManifest()
+
+    expect(screen.getAllByText('Present & verified').length).toBeGreaterThan(0)
   })
 })
 
