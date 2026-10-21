@@ -22,9 +22,24 @@ export type CollectionManifest = {
   resources: CollectionResource[]
 }
 
+// A collection as the app stores it: a manifest without the format marker.
+// The manifest schema is the single source of truth, so stored collections are
+// validated by re-attaching `schemaVersion` before checking them.
+export type Collection = {
+  id: string
+  name: string
+  description: string
+  createdAt: string
+  resources: CollectionResource[]
+}
+
 export type ManifestValidationResult =
   | { valid: true; manifest: CollectionManifest }
   | { valid: false; errors: string[] }
+
+// The manifest schema requires a non-empty language code. "und" is the ISO
+// 639-3 code for an undetermined language.
+export const UNDETERMINED_LANGUAGE = 'und'
 
 const ajv = new Ajv({ allErrors: true })
 
@@ -110,4 +125,42 @@ export function validateManifestData(data: unknown): ManifestValidationResult {
 
 export function serializeManifest(manifest: CollectionManifest): string {
   return `${JSON.stringify(manifest, null, 2)}\n`
+}
+
+export type CollectionListValidationResult =
+  | { valid: true; collections: Collection[] }
+  | { valid: false; errors: string[] }
+
+export function validateCollectionList(data: unknown): CollectionListValidationResult {
+  if (!Array.isArray(data)) {
+    return { valid: false, errors: ['collections must be an array'] }
+  }
+
+  const collections: Collection[] = []
+  const errors: string[] = []
+  const seenIds = new Set<string>()
+
+  data.forEach((entry, index) => {
+    const result = validateManifestData(
+      typeof entry === 'object' && entry !== null
+        ? { ...(entry as Record<string, unknown>), schemaVersion: 1 }
+        : entry,
+    )
+    if (!result.valid) {
+      errors.push(`collections[${index}]: ${result.errors.join('; ')}`)
+      return
+    }
+    if (seenIds.has(result.manifest.id)) {
+      errors.push(`collections[${index}]: duplicate collection ID "${result.manifest.id}"`)
+      return
+    }
+    seenIds.add(result.manifest.id)
+    const { schemaVersion: _schemaVersion, ...collection } = result.manifest
+    collections.push(collection)
+  })
+
+  if (errors.length > 0) {
+    return { valid: false, errors }
+  }
+  return { valid: true, collections }
 }

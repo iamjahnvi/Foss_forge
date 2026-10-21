@@ -1,4 +1,4 @@
-tell me wha# Logs
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -11,8 +11,8 @@ node_modules
 dist
 dist-ssr
 dist-server
-*.local
 server-data/
+*.local
 .env
 .env.*
 !.env.example

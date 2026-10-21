@@ -106,4 +106,19 @@ describe('Kiwix Collections project manifests', () => {
     expect(manifestFilename('CON')).toBe('collection-CON.json')
     expect(manifestFilename('CON.txt')).toBe('collection-CON.txt.json')
   })
+
+  it('survives an export and import round trip', () => {
+    const exported = serializeManifest(validManifest)
+    expect(exported.endsWith('\n')).toBe(true)
+    expect(parseManifest(exported)).toEqual(validManifest)
+  })
+
+  it('round trips a collection that was built from the local inventory', () => {
+    const collection = addImportedCollection(validManifest, [])
+    const exported = serializeManifest({ schemaVersion: 1, ...collection })
+    const imported = parseManifest(exported)
+
+    expect(imported.resources[0].zimUuid).toBe('zim-uuid')
+    expect(imported.resources[0].sha256).toBe('a'.repeat(64))
+  })
 })

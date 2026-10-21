@@ -1,11 +1,17 @@
 import {
   validateManifestData,
+  type Collection,
   type CollectionManifest,
   type CollectionResource,
 } from '../shared/manifest'
 
-export type { CollectionManifest, CollectionResource }
-export { serializeManifest, validateManifestData } from '../shared/manifest'
+export type { Collection, CollectionManifest, CollectionResource }
+export {
+  serializeManifest,
+  validateCollectionList,
+  validateManifestData,
+  UNDETERMINED_LANGUAGE,
+} from '../shared/manifest'
 
 export function parseManifest(json: string): CollectionManifest {
   let data: unknown

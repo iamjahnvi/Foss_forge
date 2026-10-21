@@ -1,12 +1,29 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { BookOpen, Boxes, CircleHelp, Download, Plus, Upload, X } from 'lucide-react'
-import { addImportedCollection, createCollection, type Collection } from './collections'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { BookOpen, Boxes, CircleHelp, Download, Plus, QrCode, Upload, X } from 'lucide-react'
+import { CollectionEditor } from './CollectionEditor'
+import { LocalInventory } from './LocalInventory'
+import { QrShareDialog } from './QrShareDialog'
+import {
+  addImportedCollection,
+  addResource,
+  collectionToManifest,
+  createCollection,
+  duplicateCollection,
+  moveResource,
+  removeResource,
+  updateResource,
+  type Collection,
+} from './collections'
 import {
   manifestFilename,
   parseManifest,
   serializeManifest,
   type CollectionManifest,
+  type CollectionResource,
 } from './manifest'
+import { inventoryEntryToResource, type InventoryEntry } from './inventory'
+import { useCollections } from './useCollections'
+import { useInventory } from './useInventory'
 
 type Section = 'Collections' | 'Import / Export' | 'Local Inventory'
 
@@ -18,7 +35,7 @@ const sections: { label: Section; icon: typeof Boxes }[] = [
 
 function App() {
   const [activeSection, setActiveSection] = useState<Section>('Collections')
-  const [collections, setCollections] = useState<Collection[]>([])
+  const [openCollectionId, setOpenCollectionId] = useState<string | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -26,8 +43,26 @@ function App() {
   const [pendingImport, setPendingImport] = useState<CollectionManifest | null>(null)
   const [importError, setImportError] = useState('')
   const [importMessage, setImportMessage] = useState('')
+  const [collectionMessage, setCollectionMessage] = useState('')
+  const [sharedManifest, setSharedManifest] = useState<CollectionManifest | null>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
+
+  const {
+    collections,
+    syncStatus,
+    syncError,
+    addCollection,
+    updateCollection,
+    removeCollection,
+    replaceCollections,
+  } = useCollections()
+  const inventory = useInventory()
+
+  const openCollection = useMemo(
+    () => collections.find((collection) => collection.id === openCollectionId) ?? null,
+    [collections, openCollectionId],
+  )
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -50,19 +85,12 @@ function App() {
       return
     }
 
-    setCollections((current) => [...current, createCollection(name, description)])
+    addCollection(createCollection(name, description))
     closeCreateDialog()
   }
 
   function handleExport(collection: Collection) {
-    const manifest: CollectionManifest = {
-      schemaVersion: 1,
-      id: collection.id,
-      name: collection.name,
-      description: collection.description,
-      createdAt: collection.createdAt,
-      resources: collection.resources,
-    }
+    const manifest = collectionToManifest(collection)
     const file = new Blob([serializeManifest(manifest)], {
       type: 'application/json;charset=utf-8',
     })
@@ -74,6 +102,10 @@ function App() {
     link.click()
     link.remove()
     window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  function handleShare(collection: Collection) {
+    setSharedManifest(collectionToManifest(collection))
   }
 
   async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
@@ -100,7 +132,7 @@ function App() {
 
     const imported = addImportedCollection(pendingImport, collections)
     const idWasChanged = imported.id !== pendingImport.id
-    setCollections((current) => [...current, imported])
+    replaceCollections([...collections, imported])
     setPendingImport(null)
     setImportError('')
     setImportMessage(
@@ -108,6 +140,54 @@ function App() {
         ? 'Collection imported. Its ID was changed to avoid a conflict with an existing collection.'
         : 'Collection imported successfully.',
     )
+  }
+
+  function handleAddResource(collectionId: string, resource: CollectionResource) {
+    setCollectionMessage('')
+    try {
+      updateCollection(collectionId, (collection) => addResource(collection, resource))
+    } catch (error) {
+      setCollectionMessage(error instanceof Error ? error.message : 'The resource was not added.')
+    }
+  }
+
+  function handleAddInventoryEntry(collectionId: string, entry: InventoryEntry) {
+    handleAddResource(collectionId, inventoryEntryToResource(entry))
+  }
+
+  function handleUpdateResource(
+    collectionId: string,
+    resourceId: string,
+    patch: Partial<Omit<CollectionResource, 'id'>>,
+  ) {
+    updateCollection(collectionId, (collection) => updateResource(collection, resourceId, patch))
+  }
+
+  function handleRemoveResource(collectionId: string, resourceId: string) {
+    updateCollection(collectionId, (collection) => removeResource(collection, resourceId))
+  }
+
+  function handleMoveResource(collectionId: string, resourceId: string, offset: number) {
+    updateCollection(collectionId, (collection) => moveResource(collection, resourceId, offset))
+  }
+
+  function handleRename(collectionId: string, nextName: string, nextDescription: string) {
+    updateCollection(collectionId, (collection) => ({
+      ...collection,
+      name: nextName,
+      description: nextDescription,
+    }))
+  }
+
+  function handleDelete(collectionId: string) {
+    removeCollection(collectionId)
+    setOpenCollectionId(null)
+  }
+
+  function handleDuplicate(collectionId: string) {
+    const collection = collections.find((item) => item.id === collectionId)
+    if (!collection) return
+    addCollection(duplicateCollection(collection))
   }
 
   return (
@@ -127,6 +207,13 @@ function App() {
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
               Curate and share collections of offline knowledge resources. Your collections
               describe resources; they do not contain or distribute ZIM files.
+            </p>
+            <p className="mt-3 w-fit rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-slate-600">
+              {syncStatus === 'api'
+                ? 'Collections are stored by the local API.'
+                : syncStatus === 'local'
+                  ? 'Collections are stored in this browser only.'
+                  : 'Loading collections…'}
             </p>
           </div>
         </div>
@@ -153,78 +240,131 @@ function App() {
         </nav>
 
         <main className="min-w-0">
-          {activeSection === 'Collections' ? (
-            <>
-              <div className="flex flex-col gap-4 border-b border-stone-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-sm font-medium text-emerald-800">Your library</p>
-                  <h2 className="mt-1 text-xl font-semibold tracking-tight">Collections</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsCreateOpen(true)}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
-                >
-                  <Plus aria-hidden="true" size={18} />
-                  Create collection
-                </button>
-              </div>
+          {syncError && (
+            <p
+              role="status"
+              className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900"
+            >
+              {syncError}
+            </p>
+          )}
 
-              {collections.length === 0 ? (
-                <section
-                  aria-labelledby="empty-state-title"
-                  className="flex min-h-72 flex-col items-center justify-center py-12 text-center"
-                >
-                  <span className="flex size-12 items-center justify-center rounded-full bg-stone-100 text-slate-600">
-                    <Boxes aria-hidden="true" size={24} />
-                  </span>
-                  <h3 id="empty-state-title" className="mt-5 text-lg font-semibold">
-                    No collections yet
-                  </h3>
-                  <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">
-                    Create a collection to start organizing references to offline knowledge
-                    resources. You can add its details now and build on it later.
-                  </p>
+          {activeSection === 'Collections' ? (
+            openCollection ? (
+              <CollectionEditor
+                collection={openCollection}
+                inventory={inventory.entries}
+                onClose={() => setOpenCollectionId(null)}
+                onRename={handleRename}
+                onDelete={handleDelete}
+                onDuplicate={handleDuplicate}
+                onExport={handleExport}
+                onShare={handleShare}
+                onAddResource={handleAddResource}
+                onUpdateResource={handleUpdateResource}
+                onRemoveResource={handleRemoveResource}
+                onMoveResource={handleMoveResource}
+              />
+            ) : (
+              <>
+                <div className="flex flex-col gap-4 border-b border-stone-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-emerald-800">Your library</p>
+                    <h2 className="mt-1 text-xl font-semibold tracking-tight">Collections</h2>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setIsCreateOpen(true)}
-                    className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                   >
                     <Plus aria-hidden="true" size={18} />
                     Create collection
                   </button>
-                </section>
-              ) : (
-                <ul className="divide-y divide-stone-200">
-                  {collections.map((collection) => (
-                    <li
-                      key={collection.id}
-                      className="flex flex-col gap-4 py-5 sm:flex-row sm:items-start sm:justify-between"
+                </div>
+
+                {collectionMessage && (
+                  <p
+                    role="alert"
+                    className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-800"
+                  >
+                    {collectionMessage}
+                  </p>
+                )}
+
+                {collections.length === 0 ? (
+                  <section
+                    aria-labelledby="empty-state-title"
+                    className="flex min-h-72 flex-col items-center justify-center py-12 text-center"
+                  >
+                    <span className="flex size-12 items-center justify-center rounded-full bg-stone-100 text-slate-600">
+                      <Boxes aria-hidden="true" size={24} />
+                    </span>
+                    <h3 id="empty-state-title" className="mt-5 text-lg font-semibold">
+                      No collections yet
+                    </h3>
+                    <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">
+                      Create a collection to start organizing references to offline knowledge
+                      resources. You can add its details now and build on it later.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateOpen(true)}
+                      className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                     >
-                      <div>
-                        <h3 className="font-semibold">{collection.name}</h3>
-                        {collection.description && (
-                          <p className="mt-1 text-sm leading-6 text-slate-600">
-                            {collection.description}
-                          </p>
-                        )}
-                        <p className="mt-2 text-xs text-slate-500">
-                          {collection.resources.length} resources
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleExport(collection)}
-                        className="inline-flex min-h-10 w-fit items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                      <Plus aria-hidden="true" size={18} />
+                      Create collection
+                    </button>
+                  </section>
+                ) : (
+                  <ul className="divide-y divide-stone-200">
+                    {collections.map((collection) => (
+                      <li
+                        key={collection.id}
+                        className="flex flex-col gap-4 py-5 sm:flex-row sm:items-start sm:justify-between"
                       >
-                        <Download aria-hidden="true" size={16} />
-                        Export JSON
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
+                        <div className="min-w-0">
+                          <h3 className="font-semibold">{collection.name}</h3>
+                          {collection.description && (
+                            <p className="mt-1 text-sm leading-6 text-slate-600">
+                              {collection.description}
+                            </p>
+                          )}
+                          <p className="mt-2 text-xs text-slate-500">
+                            {collection.resources.length}{' '}
+                            {collection.resources.length === 1 ? 'resource' : 'resources'}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setOpenCollectionId(collection.id)}
+                            className="inline-flex min-h-10 w-fit items-center gap-2 rounded-md bg-emerald-800 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                          >
+                            Open
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleShare(collection)}
+                            className="inline-flex min-h-10 w-fit items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                          >
+                            <QrCode aria-hidden="true" size={16} />
+                            Share QR
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleExport(collection)}
+                            className="inline-flex min-h-10 w-fit items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                          >
+                            <Download aria-hidden="true" size={16} />
+                            Export JSON
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )
           ) : activeSection === 'Import / Export' ? (
             <section aria-labelledby="import-export-title">
               <div className="border-b border-stone-200 pb-5">
@@ -234,7 +374,8 @@ function App() {
                 </h2>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
                   Import a Kiwix Collections version 1 JSON manifest to preview and add its
-                  metadata. Manifests contain references only, not ZIM file contents.
+                  metadata. Manifests contain references only, not ZIM file contents. A
+                  collection can also be shared as a QR code from the Collections section.
                 </p>
               </div>
               <div className="py-6">
@@ -297,14 +438,16 @@ function App() {
               </div>
             </section>
           ) : (
-            <section className="border-b border-stone-200 pb-5">
-              <p className="text-sm font-medium text-emerald-800">Coming later</p>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight">{activeSection}</h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
-                This area is a placeholder for a future step. No files are scanned, imported,
-                exported, or processed in this foundation.
-              </p>
-            </section>
+            <LocalInventory
+              entries={inventory.entries}
+              collections={collections}
+              isScanning={inventory.isScanning}
+              error={inventory.error}
+              message={inventory.message}
+              onScanFiles={inventory.scan}
+              onAddToCollection={handleAddInventoryEntry}
+              onRemoveEntry={inventory.removeEntry}
+            />
           )}
         </main>
       </div>
@@ -392,6 +535,13 @@ function App() {
           </form>
         </dialog>
       )}
+
+      <QrShareDialog
+        open={sharedManifest !== null}
+        manifest={sharedManifest ?? { schemaVersion: 1, id: '', name: '', description: '', createdAt: '', resources: [] }}
+        filename={sharedManifest ? manifestFilename(sharedManifest.name) : 'collection.json'}
+        onClose={() => setSharedManifest(null)}
+      />
     </div>
   )
 }
