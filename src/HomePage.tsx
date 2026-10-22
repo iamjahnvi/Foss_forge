@@ -107,6 +107,11 @@ export function HomePage() {
     window.scrollTo?.(0, 0)
   }
 
+  function startLogin() {
+    window.location.hash = '#/login'
+    window.scrollTo?.(0, 0)
+  }
+
   function go(next: HomeRoute) {
     const hash = next === 'home' ? '#/' : `#/${next}`
     if (window.location.hash !== hash) window.location.hash = hash
@@ -372,10 +377,10 @@ export function HomePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => go('how-kiwix-works')}
+                  onClick={startLogin}
                   className="inline-flex min-h-12 items-center gap-2 rounded-lg border border-stone-300 bg-white/80 px-6 py-3 text-sm font-semibold shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                 >
-                  See how it works
+                  Login
                 </button>
               </div>
               <p className="mt-4 max-w-xl text-sm leading-6 text-slate-500">

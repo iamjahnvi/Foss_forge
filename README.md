@@ -15,7 +15,7 @@ In a second terminal, start the frontend:
 npm run dev
 ```
 
-Choose **Get started** to create an account with your name, email, password, and sender or recipient role. The server generates a Kiwix ID and hashes the password with bcrypt before saving the account in `server-data/accounts.db`. There is no Google sign-in. Collections are saved in this browser's local storage (`kiwix-collections:v1:local`); export a JSON manifest or share a QR code to move them between devices.
+Run `npm run dev` in one terminal. Vite serves the frontend and signup API together. Choose **Get started** to create an account with your name, email, password, and sender or recipient role. The server generates a Kiwix ID and hashes the password with bcrypt before saving the account in `server-data/accounts.db`. Use **Login** with your name, email, and password to return to the app. There is no Google sign-in. Collections are saved in this browser's local storage (`kiwix-collections:v1:local`); export a JSON manifest or share a QR code to move them between devices.
 
 ## Features
 

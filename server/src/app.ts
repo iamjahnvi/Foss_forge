@@ -2,8 +2,8 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import { createAccountStore, DuplicateEmailError } from './accountStore.js'
 import type { AccountRole } from '../../shared/account.js'
 
-// The server only provides a liveness endpoint. Collections are stored in the
-// browser, so no account, session, or transfer endpoints are needed.
+// Accounts are created and verified here; the collection data itself stays in
+// the user's browser.
 export function createApp(): Express {
   const app = express()
   const accounts = createAccountStore()
@@ -44,6 +44,27 @@ export function createApp(): Express {
         return
       }
       response.status(500).json({ error: 'The account could not be created. Please try again.' })
+    }
+  })
+  app.post('/api/auth/login', async (request, response) => {
+    const body = request.body as Record<string, unknown> | null
+    const name = typeof body?.['name'] === 'string' ? body['name'].trim() : ''
+    const email = typeof body?.['email'] === 'string' ? body['email'].trim() : ''
+    const password = typeof body?.['password'] === 'string' ? body['password'] : ''
+    if (!name || !email || !password) {
+      response.status(400).json({ error: 'Enter your name, email address, and password.' })
+      return
+    }
+
+    try {
+      const user = await accounts.authenticate(name, email, password)
+      if (!user) {
+        response.status(401).json({ error: 'Those name, email, and password details do not match an account.' })
+        return
+      }
+      response.json({ user })
+    } catch {
+      response.status(500).json({ error: 'Login could not be completed. Please try again.' })
     }
   })
   app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {

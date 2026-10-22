@@ -19,6 +19,27 @@ export type NewAccount = {
   role: AccountRole
 }
 
+type AccountRow = {
+  id: string
+  name: string
+  email: string
+  kiwi_id: string
+  role: AccountRole
+  password_hash: string
+  created_at: string
+}
+
+function toProfile(row: AccountRow): AccountProfile {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    kiwiId: row.kiwi_id,
+    role: row.role,
+    createdAt: row.created_at,
+  }
+}
+
 export function createAccountStore() {
   const configuredPath = process.env['KIWIX_ACCOUNTS_DB'] ?? 'server-data/accounts.db'
   const path = resolve(process.cwd(), configuredPath)
@@ -39,6 +60,7 @@ export function createAccountStore() {
   const insert = database.prepare(
     'INSERT INTO accounts (id, name, email, kiwi_id, role, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
   )
+  const findCredentials = database.prepare('SELECT * FROM accounts WHERE email = ? COLLATE NOCASE')
 
   return {
     async create(input: NewAccount): Promise<AccountProfile> {
@@ -63,6 +85,14 @@ export function createAccountStore() {
       }
 
       return { id, name, email, kiwiId, role: input.role, createdAt }
+    },
+    async authenticate(nameInput: string, emailInput: string, password: string): Promise<AccountProfile | null> {
+      const email = emailInput.trim().toLowerCase()
+      const name = nameInput.trim().toLocaleLowerCase()
+      const row = findCredentials.get(email) as AccountRow | undefined
+      if (!row || row.name.toLocaleLowerCase() !== name) return null
+      if (!(await bcrypt.compare(password, row.password_hash))) return null
+      return toProfile(row)
     },
   }
 }

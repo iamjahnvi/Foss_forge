@@ -6,9 +6,10 @@ import App from './App'
 import { HomePage } from './HomePage'
 import { SignupPage } from './SignupPage'
 
-function readRoute(hash: string = window.location.hash): 'app' | 'signup' | 'home' {
+function readRoute(hash: string = window.location.hash): 'app' | 'signup' | 'login' | 'home' {
   if (/^#\/app(\/|$)/.test(hash)) return 'app'
   if (/^#\/signup(\/|$)/.test(hash)) return 'signup'
+  if (/^#\/login(\/|$)/.test(hash)) return 'login'
   return 'home'
 }
 
@@ -22,8 +23,8 @@ export function Root() {
   }, [])
 
   if (route === 'app') return <App />
-  if (route === 'signup') {
-    return <SignupPage onBack={() => { window.location.hash = '#/' }} onCreated={() => { window.location.hash = '#/app' }} />
+  if (route === 'signup' || route === 'login') {
+    return <SignupPage mode={route} onBack={() => { window.location.hash = '#/' }} onCreated={() => { window.location.hash = '#/app' }} />
   }
   return <HomePage />
 }
