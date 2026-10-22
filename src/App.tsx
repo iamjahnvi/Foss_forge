@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
-import { BookOpen, Boxes, Download, Mail, Plus, QrCode, Send, Upload, X } from 'lucide-react'
+import { BookOpen, Boxes, Download, Plus, QrCode, Send, Upload, X } from 'lucide-react'
 import { CollectionEditor } from './CollectionEditor'
 import { CompatibilityReportView } from './CompatibilityReport'
 import { buildCompatibilityReport } from './compatibility'
@@ -234,11 +234,14 @@ function App({ transferId }: { transferId?: string } = {}) {
     }
   }
 
-  function handleShareTransferLink(item: { name: string; email: string; link: string }) {
-    const collection = collections.find((entry) => entry.id === transferCollectionId)
-    const subject = `Kiwix Collections: ${collection?.name ?? 'a collection was shared with you'}`
-    const body = `Hi ${item.name},\n\nA Kiwix collection has been shared with you. Sign in to your recipient account to review it:\n\n${item.link}\n`
-    window.location.href = `mailto:${encodeURIComponent(item.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  async function handleShareTransferLink(item: { name: string; email: string; link: string }) {
+    try {
+      await navigator.clipboard.writeText(item.link)
+      setTransferError('')
+      setTransferMessage(`Share link copied for ${item.name}. Paste it into a message to send it to ${item.email}.`)
+    } catch {
+      setTransferError(`Could not copy the share link for ${item.name}. Select and copy it from the link field.`)
+    }
   }
 
   async function dismissNotifications() {
@@ -604,7 +607,7 @@ function App({ transferId }: { transferId?: string } = {}) {
                       <div key={item.kiwiId} className="rounded-lg border border-stone-200 bg-stone-50 p-4">
                         <p className="text-sm font-semibold">Link for {item.name} <span className="font-normal text-slate-500">· {item.email}</span></p>
                         <input aria-label={`Recipient-only link for ${item.name}`} readOnly value={item.link} className="mt-2 min-h-10 w-full rounded-md border border-stone-300 bg-white px-3 text-sm" />
-                        <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => void handleCopyTransferLink(item.link)} className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium">Copy link</button><button type="button" onClick={() => handleShareTransferLink(item)} className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium"><Mail size={16} />Share link</button><button type="button" onClick={() => { const collection = collections.find((entry) => entry.id === transferCollectionId); if (collection) setTransferQr({ manifest: collectionToManifest(collection), link: item.link }) }} className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium"><QrCode size={16} />QR link</button></div>
+                        <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => void handleCopyTransferLink(item.link)} className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium">Copy link</button><button type="button" onClick={() => void handleShareTransferLink(item)} className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium">Share link</button><button type="button" onClick={() => { const collection = collections.find((entry) => entry.id === transferCollectionId); if (collection) setTransferQr({ manifest: collectionToManifest(collection), link: item.link }) }} className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium"><QrCode size={16} />QR link</button></div>
                       </div>
                     ))}
                     {transferCollectionId && <button type="button" onClick={() => { const item = collections.find((entry) => entry.id === transferCollectionId); if (item) handleExport(item) }} className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium"><Download size={16} />Download JSON manifest</button>}
@@ -627,7 +630,7 @@ function App({ transferId }: { transferId?: string } = {}) {
                   Choose JSON manifest
                 </button>
 
-                <QrScanner onDecoded={handleDecodedQr} />
+                {account?.role !== 'sender' && <QrScanner onDecoded={handleDecodedQr} />}
 
                 {importError && (
                   <p role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-800">
