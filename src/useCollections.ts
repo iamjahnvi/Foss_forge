@@ -9,7 +9,7 @@ import type { Collection } from './manifest'
 //   'loading' - the first load has not finished yet.
 export type CollectionsSyncStatus = 'loading' | 'api' | 'local'
 
-export function useCollections() {
+export function useCollections(userId: string) {
   const [collections, setCollections] = useState<Collection[]>([])
   const [syncStatus, setSyncStatus] = useState<CollectionsSyncStatus>('loading')
   const [syncError, setSyncError] = useState('')
@@ -27,7 +27,7 @@ export function useCollections() {
       })
       .catch(() => {
         if (controller.signal.aborted) return
-        const stored = readStoredCollections()
+        const stored = readStoredCollections(userId)
         savedSnapshotRef.current = stored ? JSON.stringify(stored) : null
         setCollections(stored ?? [])
         setSyncStatus('local')
@@ -39,7 +39,7 @@ export function useCollections() {
       })
 
     return () => controller.abort()
-  }, [])
+  }, [userId])
 
   useEffect(() => {
     if (syncStatus === 'loading') return
@@ -49,7 +49,7 @@ export function useCollections() {
     savedSnapshotRef.current = snapshot
 
     // The local copy is written first so a failing API never loses work.
-    writeStoredCollections(collections)
+    writeStoredCollections(userId, collections)
     if (syncStatus !== 'api') return
 
     const timer = window.setTimeout(() => {
@@ -64,7 +64,7 @@ export function useCollections() {
     }, 300)
 
     return () => window.clearTimeout(timer)
-  }, [collections, syncStatus])
+  }, [collections, syncStatus, userId])
 
   const addCollection = useCallback((collection: Collection) => {
     setCollections((current) => [...current, collection])

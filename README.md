@@ -2,6 +2,23 @@
 
 Kiwix Collections is a simple interface for curating and sharing collections of references to offline knowledge resources. Collections contain metadata only; this app does not host, copy, or distribute ZIM files.
 
+## The two sides
+
+The app is built around two roles, and a person picks one when they create an account:
+
+- A **sender** curates collections of offline resources and shares them. They scan the archives they own, build a collection, and hand it over as a JSON manifest or as a QR code.
+- A **receiver** takes a collection from somebody else and checks it against the archives on their own machine. The compatibility report tells them what they have, what is missing and what does not match.
+
+The home page explains both flows before anybody signs in. A kiwi id is the short handle the other side of a shared collection sees, and it has to be unique.
+
+## Accounts
+
+A sign-up asks for a name, an email address, a kiwi id, a role and a password. The password is hashed with scrypt and a per-account salt, and it is never returned by the API. A session is an opaque token that the browser keeps and sends as `Authorization: Bearer <token>`.
+
+Accounts and their collections live in the API process in memory, like the collection list did before. Every account keeps its own collections, so two people on the same API never see each other's work. The browser also keeps its own copy per account (`kiwix-collections:v1:<user id>`) and falls back to it when the API is unreachable.
+
+The account rules live in [`shared/auth.ts`](./shared/auth.ts) with the sign-up schema in [`shared/auth.schema.json`](./shared/auth.schema.json), and the server side in [`server/src/authStore.ts`](./server/src/authStore.ts).
+
 ## Run locally
 
 Start the API and frontend in separate terminals from the project root:
@@ -25,6 +42,8 @@ npm run lint
 
 ## What the app does
 
+- **Home page** — the explanation of the project, of a collection, of the sender flow and of the receiver flow, followed by the sign-up and sign-in.
+- **Accounts** — sign up with a name, an email address, a unique kiwi id, a role (sender or receiver) and a password. Sign in with either the kiwi id or the email address, and sign out from the header.
 - **Collections** — create, rename, duplicate and delete collections. Open a collection to edit its resources: title, language, description, source URL, and the order they are listed in. Every resource carries a badge that says whether the archive it describes is on this machine.
 - **Local Inventory** — scan the ZIM archives you already own. The browser reads the 80-byte archive header and the trailing checksum, and records the UUID, format version, article count, language guess and size. Files never leave the machine. Scanned archives can be added to a collection as a resource.
 - **Import / Export** — export a collection as a JSON manifest, and import a manifest to preview it. The preview runs the compatibility report before anything is saved.
@@ -56,11 +75,15 @@ The share dialog encodes the whole manifest in a QR code, so a second device can
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/health` | Liveness check. |
-| `GET` | `/api/collections` | Return the stored collection list. |
-| `PUT` | `/api/collections` | Replace the stored collection list. Every collection is validated against the manifest schema. |
+| `POST` | `/api/auth/signup` | Create an account and return the person with a session token. |
+| `POST` | `/api/auth/login` | Sign in with a kiwi id or an email address and return a session token. |
+| `GET` | `/api/auth/me` | Return the account of the current session. |
+| `POST` | `/api/auth/signout` | Close the current session. |
+| `GET` | `/api/collections` | Return the stored collection list of the current account. |
+| `PUT` | `/api/collections` | Replace the stored collection list of the current account. Every collection is validated against the manifest schema. |
 | `DELETE` | `/api/collections/:id` | Remove one collection. |
 
-The API keeps collections in memory for the lifetime of the process. The browser keeps its own copy and re-sends the full list on every change, so restarting the API does not lose data.
+Every route except the health check and the two sign-in routes needs a session token, and answers `401` without one. The API keeps accounts, sessions and collections in memory for the lifetime of the process. The browser keeps its own copy and re-sends the full list on every change, so restarting the API does not lose data.
 
 ## Manifest format
 

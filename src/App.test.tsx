@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { ZIM_HEADER_SIZE, ZIM_MAGIC } from './zim'
+import type { AuthUser } from '../shared/auth'
 
 // The QR scanner is exercised through a stub, so the test does not need a
 // camera. The stub returns the manifest a shared QR code would carry.
@@ -27,6 +28,20 @@ vi.mock('./qrDecoder', () => ({
   ),
   decodeQrFromVideo: vi.fn(() => null),
 }))
+
+// The app is always rendered for somebody who is signed in.
+const signedInUser: AuthUser = {
+  id: 'user-1',
+  name: 'Test Person',
+  email: 'test@example.org',
+  kiwiId: 'test-person',
+  role: 'sender',
+  createdAt: '2026-10-21T09:00:00Z',
+}
+
+function renderApp() {
+  return render(<App user={signedInUser} onSignOut={vi.fn()} />)
+}
 
 beforeAll(() => {
   // jsdom does not implement the modal dialog methods.
@@ -88,7 +103,7 @@ afterEach(() => {
 
 describe('collections', () => {
   it('creates a collection and lists it', async () => {
-    render(<App />)
+    renderApp()
 
     await createCollection('World history')
 
@@ -96,7 +111,7 @@ describe('collections', () => {
   })
 
   it('opens a collection and adds a resource by hand', async () => {
-    render(<App />)
+    renderApp()
 
     await createCollection('World history')
     fireEvent.click(screen.getByRole('button', { name: 'Open' }))
@@ -113,7 +128,7 @@ describe('collections', () => {
 
   it('sends the collection list to the API', async () => {
     const fetchMock = mockApi([])
-    render(<App />)
+    renderApp()
 
     await createCollection('World history')
 
@@ -128,7 +143,7 @@ describe('collections', () => {
   })
 
   it('shares a collection as a QR code', async () => {
-    render(<App />)
+    renderApp()
 
     await createCollection('World history')
     fireEvent.click(screen.getByRole('button', { name: 'Share QR' }))
@@ -165,7 +180,7 @@ describe('compatibility report', () => {
   }
 
   async function importManifest() {
-    render(<App />)
+    renderApp()
     fireEvent.click(screen.getByRole('button', { name: 'Import / Export' }))
 
     const file = new File([JSON.stringify(manifest)], 'collection.json', {
@@ -186,7 +201,7 @@ describe('compatibility report', () => {
     expect(screen.getByText(/No local archives are scanned yet/)).toBeTruthy()
   })
 
-  it('marks an archive that was scanned locally as present and verified', async () => {    render(<App />)
+  it('marks an archive that was scanned locally as present and verified', async () => {    renderApp()
 
     await createCollection('Offline set')
     fireEvent.click(screen.getByRole('button', { name: 'Local Inventory' }))
@@ -203,7 +218,7 @@ describe('compatibility report', () => {
   })
 
   it('imports a collection from a scanned QR code and reports its compatibility', async () => {
-    render(<App />)
+    renderApp()
     fireEvent.click(screen.getByRole('button', { name: 'Import / Export' }))
 
     fireEvent.change(screen.getByLabelText('Choose a picture of a QR code'), {
@@ -217,9 +232,40 @@ describe('compatibility report', () => {
   })
 })
 
+describe('the account', () => {
+  it('shows who is signed in and their role', () => {
+    renderApp()
+
+    expect(screen.getByText('Test Person')).toBeTruthy()
+    expect(screen.getByText(/@test-person · Sender/)).toBeTruthy()
+  })
+
+  it('signs out when the sign out button is used', async () => {
+    const onSignOut = vi.fn()
+    render(<App user={signedInUser} onSignOut={onSignOut} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+
+    expect(onSignOut).toHaveBeenCalledTimes(1)
+  })
+
+  it('explains the receiver side to somebody who receives collections', () => {
+    render(
+      <App
+        user={{ ...signedInUser, role: 'receiver' }}
+        onSignOut={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByRole('heading', { level: 1 }).textContent,
+    ).toContain('Check what a shared collection asks of you.')
+  })
+})
+
 describe('local inventory', () => {
   it('scans a ZIM archive and lists it', async () => {
-    render(<App />)
+    renderApp()
 
     await createCollection('Offline set')
     fireEvent.click(screen.getByRole('button', { name: 'Local Inventory' }))
@@ -235,7 +281,7 @@ describe('local inventory', () => {
   })
 
   it('adds a scanned archive to a collection', async () => {
-    render(<App />)
+    renderApp()
 
     await createCollection('Offline set')
     fireEvent.click(screen.getByRole('button', { name: 'Local Inventory' }))

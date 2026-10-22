@@ -1,38 +1,77 @@
+// The collections of every account.
+//
+// Each collection is a row that belongs to one account, so one person's
+// library never shows up in another's. The browser keeps its own copy and
+// re-sends the full list on every change, so the API does not have to know
+// about every small edit.
+
 import type { Collection } from '../../shared/manifest.js'
+import type { Database } from './database.js'
 
 export type CollectionStore = {
-  list(): Collection[]
-  replaceAll(collections: Collection[]): Collection[]
-  remove(id: string): boolean
-  clear(): void
+  list(userId: string): Collection[]
+  replaceAll(userId: string, collections: Collection[]): Collection[]
+  remove(userId: string, id: string): boolean
+  find(userId: string, id: string): Collection | undefined
 }
 
-// The store keeps collections in memory for the lifetime of the API process.
-// The browser keeps its own copy and re-sends the full list on every change,
-// so a server restart does not lose data.
-export function createCollectionStore(initial: Collection[] = []): CollectionStore {
-  let collections = new Map<string, Collection>(
-    initial.map((collection) => [collection.id, collection]),
+type CollectionRow = {
+  id: string
+  payload: string
+}
+
+export function createCollectionStore(database: Database): CollectionStore {
+  const selectAll = database.prepare(
+    'SELECT id, payload FROM collections WHERE account_id = ? ORDER BY name',
   )
+  const selectOne = database.prepare(
+    'SELECT id, payload FROM collections WHERE account_id = ? AND id = ?',
+  )
+  const insert = database.prepare(
+    `INSERT INTO collections (id, account_id, name, payload, updated_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  )
+  const removeOne = database.prepare(
+    'DELETE FROM collections WHERE account_id = ? AND id = ?',
+  )
+  const removeAll = database.prepare('DELETE FROM collections WHERE account_id = ?')
 
-  function list(): Collection[] {
-    return [...collections.values()]
+  function list(userId: string): Collection[] {
+    const rows = selectAll.all(userId) as CollectionRow[]
+    return rows.map((row) => JSON.parse(row.payload) as Collection)
   }
 
-  function replaceAll(next: Collection[]): Collection[] {
-    collections = new Map<string, Collection>(
-      next.map((collection) => [collection.id, collection]),
-    )
-    return list()
+  function find(userId: string, id: string): Collection | undefined {
+    const row = selectOne.get(userId, id) as CollectionRow | undefined
+    return row ? (JSON.parse(row.payload) as Collection) : undefined
   }
 
-  function remove(id: string): boolean {
-    return collections.delete(id)
+  function replaceAll(userId: string, collections: Collection[]): Collection[] {
+    const now = new Date().toISOString()
+    database.exec('BEGIN')
+    try {
+      removeAll.run(userId)
+      for (const collection of collections) {
+        insert.run(
+          collection.id,
+          userId,
+          collection.name,
+          JSON.stringify(collection),
+          now,
+        )
+      }
+      database.exec('COMMIT')
+    } catch (error) {
+      database.exec('ROLLBACK')
+      throw error
+    }
+    return list(userId)
   }
 
-  function clear(): void {
-    collections = new Map()
+  function remove(userId: string, id: string): boolean {
+    const result = removeOne.run(userId, id)
+    return result.changes > 0
   }
 
-  return { list, replaceAll, remove, clear }
+  return { list, replaceAll, remove, find }
 }
