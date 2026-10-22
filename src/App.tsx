@@ -238,7 +238,7 @@ function App({ transferId }: { transferId?: string } = {}) {
     try {
       await navigator.clipboard.writeText(item.link)
       setTransferError('')
-      setTransferMessage(`Share link copied for ${item.name}. Paste it into a message to send it to ${item.email}.`)
+      setTransferMessage(`The collection is in ${item.name}’s account inbox. Their private share link has been copied and is ready to send to ${item.email}.`)
     } catch {
       setTransferError(`Could not copy the share link for ${item.name}. Select and copy it from the link field.`)
     }
