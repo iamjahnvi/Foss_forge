@@ -20,6 +20,7 @@ import type { Collection, CollectionResource } from './manifest'
 type Props = {
   collection: Collection
   inventory: InventoryEntry[]
+  showCompatibility: boolean
   onClose: () => void
   onRename: (id: string, name: string, description: string) => void
   onDelete: (id: string) => void
@@ -52,6 +53,7 @@ function ResourceRow({
   index,
   total,
   compatibility,
+  showCompatibility,
   onUpdate,
   onRemove,
   onMove,
@@ -60,6 +62,7 @@ function ResourceRow({
   index: number
   total: number
   compatibility: CompatibilityEntry
+  showCompatibility: boolean
   onUpdate: (patch: Partial<Omit<CollectionResource, 'id'>>) => void
   onRemove: () => void
   onMove: (offset: number) => void
@@ -165,9 +168,11 @@ function ResourceRow({
             {typeof resource.sizeBytes === 'number' ? `${formatBytes(resource.sizeBytes)} · ` : ''}
             {resource.zimUuid ? `UUID ${resource.zimUuid}` : 'no ZIM identity recorded'}
           </p>
-          <div className="mt-2">
-            <CompatibilityBadge entry={compatibility} />
-          </div>
+          {showCompatibility && (
+            <div className="mt-2">
+              <CompatibilityBadge entry={compatibility} />
+            </div>
+          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -206,6 +211,7 @@ function ResourceRow({
 export function CollectionEditor({
   collection,
   inventory,
+  showCompatibility,
   onClose,
   onRename,
   onDelete,
@@ -452,6 +458,7 @@ export function CollectionEditor({
                 compatibility={
                   compatibility.get(resource.id) ?? matchResource(resource, inventory)
                 }
+                showCompatibility={showCompatibility}
                 onUpdate={(patch) => onUpdateResource(collection.id, resource.id, patch)}
                 onRemove={() => onRemoveResource(collection.id, resource.id)}
                 onMove={(offset) => onMoveResource(collection.id, resource.id, offset)}

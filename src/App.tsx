@@ -359,6 +359,7 @@ function App({ transferId }: { transferId?: string } = {}) {
               <CollectionEditor
                 collection={openCollection}
                 inventory={inventory.entries}
+                showCompatibility={account?.role !== 'sender'}
                 onClose={() => setOpenCollectionId(null)}
                 onRename={handleRename}
                 onDelete={handleDelete}
