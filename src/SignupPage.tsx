@@ -45,7 +45,7 @@ export function SignupPage({ mode, onBack, onCreated }: Props) {
       saveAccountProfile(data.user)
       setCreated(data.user)
     } catch {
-      setError('Could not reach the signup service. Start the API server and try again.')
+      setError('Could not reach the account service. Refresh the page and try again.')
     } finally {
       setBusy(false)
     }
