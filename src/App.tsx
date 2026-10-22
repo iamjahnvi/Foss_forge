@@ -28,6 +28,7 @@ import {
 import { inventoryEntryToResource, type InventoryEntry } from './inventory'
 import { useCollections } from './useCollections'
 import { useInventory } from './useInventory'
+import { readAccountProfile } from './account'
 
 type Section = 'Collections' | 'Import / Export' | 'Local Inventory'
 
@@ -38,6 +39,7 @@ const sections: { label: Section; icon: typeof Boxes }[] = [
 ]
 
 function App() {
+  const [account] = useState(readAccountProfile)
   const [activeSection, setActiveSection] = useState<Section>('Collections')
   const [openCollectionId, setOpenCollectionId] = useState<string | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -225,13 +227,19 @@ function App() {
     <div className="min-h-screen bg-stone-50 text-slate-900">
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-6 sm:px-8 sm:py-8">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <a href="#" className="flex w-fit items-center gap-3 text-inherit no-underline">
               <span className="flex size-10 items-center justify-center rounded-md bg-emerald-800 text-white">
                 <BookOpen aria-hidden="true" size={22} />
               </span>
               <span className="text-lg font-semibold tracking-tight">Kiwix Collections</span>
             </a>
+            {account && (
+              <span className="text-right">
+                <span className="block text-sm font-medium">{account.name}</span>
+                <span className="block text-xs text-slate-500">@{account.kiwiId} · {account.role}</span>
+              </span>
+            )}
           </div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">

@@ -4,21 +4,28 @@
 import { useEffect, useState } from 'react'
 import App from './App'
 import { HomePage } from './HomePage'
+import { SignupPage } from './SignupPage'
 
-function isAppRoute(hash: string = window.location.hash): boolean {
-  return /^#\/app(\/|$)/.test(hash)
+function readRoute(hash: string = window.location.hash): 'app' | 'signup' | 'home' {
+  if (/^#\/app(\/|$)/.test(hash)) return 'app'
+  if (/^#\/signup(\/|$)/.test(hash)) return 'signup'
+  return 'home'
 }
 
 export function Root() {
-  const [showApp, setShowApp] = useState(() => isAppRoute())
+  const [route, setRoute] = useState(() => readRoute())
 
   useEffect(() => {
-    const onHashChange = () => setShowApp(isAppRoute())
+    const onHashChange = () => setRoute(readRoute())
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  return showApp ? <App /> : <HomePage />
+  if (route === 'app') return <App />
+  if (route === 'signup') {
+    return <SignupPage onBack={() => { window.location.hash = '#/' }} onCreated={() => { window.location.hash = '#/app' }} />
+  }
+  return <HomePage />
 }
 
 export default Root

@@ -28,11 +28,12 @@ describe('the landing page', () => {
     expect(screen.queryByRole('region', { name: 'How a sender works' })).toBeNull()
   })
 
-  it('has no sign in or account pages', () => {
+  it('offers email signup without Google sign-in', () => {
     render(<HomePage />)
 
     expect(screen.queryByRole('button', { name: /sign in/i })).toBeNull()
-    expect(screen.queryByRole('button', { name: /create account/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /continue with google/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /get started/i })).toBeTruthy()
   })
 })
 
@@ -69,21 +70,21 @@ describe('navigation to the app', () => {
     expect(screen.queryByText('The app')).toBeNull()
   })
 
-  it('opens the app from the call to action', async () => {
+  it('opens signup from the call to action', async () => {
     render(<Root />)
 
     fireEvent.click(screen.getByRole('button', { name: /Get started/ }))
 
-    expect(window.location.hash).toBe('#/app')
-    expect(await screen.findByText('The app')).toBeTruthy()
+    expect(window.location.hash).toBe('#/signup')
+    expect(await screen.findByRole('heading', { name: 'Create your Kiwix account.' })).toBeTruthy()
   })
 
-  it('opens the app from the navbar', async () => {
+  it('opens signup from the navbar', async () => {
     render(<Root />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open the app' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
 
-    expect(await screen.findByText('The app')).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Create your Kiwix account.' })).toBeTruthy()
   })
 
   it('renders the app directly at #/app', () => {

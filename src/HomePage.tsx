@@ -35,7 +35,7 @@ function readHomeRoute(hash: string = window.location.hash): HomeRoute {
 const SENDER_STEPS = [
   {
     title: 'Open the app',
-    body: 'No account is needed. Your collections are kept in this browser, and nothing about your archives is uploaded.',
+    body: 'Create your account, then keep collections in this browser. Nothing about your archives is uploaded.',
   },
   {
     title: 'Scan the archives you already own',
@@ -54,7 +54,7 @@ const SENDER_STEPS = [
 const RECEIVER_STEPS = [
   {
     title: 'Open the app',
-    body: 'The same app, on the receiving machine. No account is needed, and the check runs entirely in the browser.',
+    body: 'Use your account on the receiving machine. The archive check runs in the browser against files already on that device.',
   },
   {
     title: 'Take the manifest',
@@ -102,6 +102,11 @@ export function HomePage() {
     window.scrollTo?.(0, 0)
   }
 
+  function startSignup() {
+    window.location.hash = '#/signup'
+    window.scrollTo?.(0, 0)
+  }
+
   function go(next: HomeRoute) {
     const hash = next === 'home' ? '#/' : `#/${next}`
     if (window.location.hash !== hash) window.location.hash = hash
@@ -136,10 +141,10 @@ export function HomePage() {
           </button>
           <button
             type="button"
-            onClick={openApp}
+            onClick={startSignup}
             className="inline-flex min-h-11 items-center gap-2 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
           >
-            Open the app
+            Create account
           </button>
         </nav>
       </div>
@@ -359,7 +364,7 @@ export function HomePage() {
               <div className="mt-8 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={openApp}
+                  onClick={startSignup}
                   className="group inline-flex min-h-12 items-center gap-2 rounded-lg bg-emerald-800 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20 transition hover:-translate-y-0.5 hover:bg-emerald-900 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                 >
                   Get started
@@ -374,8 +379,7 @@ export function HomePage() {
                 </button>
               </div>
               <p className="mt-4 max-w-xl text-sm leading-6 text-slate-500">
-                No account needed: everything is kept in your browser, and the ZIM files never leave
-                your machine.
+                Create an account with email. Your ZIM files stay on your machine.
               </p>
             </Reveal>
           </section>
