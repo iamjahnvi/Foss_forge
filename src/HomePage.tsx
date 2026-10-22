@@ -351,10 +351,8 @@ export function HomePage() {
             </Reveal>
             <Reveal delay={120}>
               <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
-                Kiwix Collections describes the offline resources you care about — the ZIM archives
-                of Wikipedia, textbooks, journals — in a small, portable manifest. One person curates
-                a collection; another takes it and finds out exactly which of the archives they
-                already have. The archives themselves are never uploaded, copied or rehosted.
+                Organize ZIM archives into portable collections. Share a manifest or QR code so
+                others can check what they have. Your files stay on your device.
               </p>
             </Reveal>
             <Reveal delay={220}>
