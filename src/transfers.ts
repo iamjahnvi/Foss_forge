@@ -41,6 +41,15 @@ export async function fetchReceived(token: string): Promise<ReceivedTransfer[]> 
   return result.transfers
 }
 
+export async function fetchUnreadTransfers(token: string): Promise<ReceivedTransfer[]> {
+  const result = await api<{ transfers: ReceivedTransfer[] }>('/api/transfers/unread', token)
+  return result.transfers
+}
+
+export async function markTransferRead(token: string, id: string): Promise<void> {
+  await api<{ status: string }>(`/api/transfers/${encodeURIComponent(id)}/read`, token, { method: 'POST' })
+}
+
 export async function fetchTransfer(token: string, id: string): Promise<ReceivedTransfer> {
   const result = await api<{ transfer: ReceivedTransfer }>(`/api/transfers/${encodeURIComponent(id)}`, token)
   return result.transfer

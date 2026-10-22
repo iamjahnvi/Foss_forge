@@ -28,7 +28,7 @@ import { inventoryEntryToResource } from './inventory'
 import { useCollections } from './useCollections'
 import { useInventory } from './useInventory'
 import { readAccountProfile, readAccountToken } from './account'
-import { fetchReceived, fetchRecipients, fetchTransfer, sendCollection as sendToRecipient, type ReceivedTransfer, type RecipientProfile } from './transfers'
+import { fetchReceived, fetchRecipients, fetchTransfer, fetchUnreadTransfers, markTransferRead, sendCollection as sendToRecipient, type ReceivedTransfer, type RecipientProfile } from './transfers'
 
 type Section = 'Collections' | 'Import / Export'
 
@@ -61,6 +61,7 @@ function App({ transferId }: { transferId?: string } = {}) {
   const [transferLinks, setTransferLinks] = useState<{ kiwiId: string; name: string; email: string; link: string }[]>([])
   const [transferQr, setTransferQr] = useState<{ manifest: CollectionManifest; link: string } | null>(null)
   const [pendingTransfer, setPendingTransfer] = useState<ReceivedTransfer | null>(null)
+  const [notifications, setNotifications] = useState<ReceivedTransfer[]>([])
   const dialogRef = useRef<HTMLDialogElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
 
@@ -82,10 +83,29 @@ function App({ transferId }: { transferId?: string } = {}) {
       setTransferError('Sign in with the recipient account to open this collection link.')
       return
     }
-    void fetchTransfer(token, transferId).then(setPendingTransfer).catch((error: unknown) => {
+    void fetchTransfer(token, transferId).then((transfer) => {
+      setPendingTransfer(transfer)
+      setNotifications((current) => current.filter((item) => item.id !== transfer.id))
+    }).catch((error: unknown) => {
       setTransferError(error instanceof Error ? error.message : 'Could not open this transfer.')
     })
   }, [transferId, token, account])
+
+  useEffect(() => {
+    if (!token || account?.role !== 'recipient') return
+    let active = true
+    const checkNotifications = () => {
+      void fetchUnreadTransfers(token).then((items) => {
+        if (active) setNotifications(items)
+      }).catch(() => undefined)
+    }
+    checkNotifications()
+    const interval = window.setInterval(checkNotifications, 20000)
+    return () => {
+      active = false
+      window.clearInterval(interval)
+    }
+  }, [account, token])
 
   useEffect(() => {
     if (!token || activeSection !== 'Import / Export') return
@@ -201,6 +221,26 @@ function App({ transferId }: { transferId?: string } = {}) {
     setPendingTransfer(null)
     setActiveSection('Import / Export')
     setImportMessage(`Collection sent by ${transfer.sender.name}. Review it below to import.`)
+  }
+
+  async function markNotificationRead(transfer: ReceivedTransfer) {
+    if (!token) return
+    try {
+      await markTransferRead(token, transfer.id)
+      setNotifications((current) => current.filter((item) => item.id !== transfer.id))
+    } catch (error) {
+      setTransferError(error instanceof Error ? error.message : 'Could not update this notification.')
+    }
+  }
+
+  async function dismissNotifications() {
+    if (!token) return
+    const unread = [...notifications]
+    setNotifications([])
+    const results = await Promise.allSettled(unread.map((item) => markTransferRead(token, item.id)))
+    if (results.some((result) => result.status === 'rejected')) {
+      setTransferError('Some notifications could not be dismissed. They may appear again.')
+    }
   }
 
   async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
@@ -714,6 +754,27 @@ function App({ transferId }: { transferId?: string } = {}) {
             </div>
           </form>
         </dialog>
+      )}
+
+      {notifications.length > 0 && account?.role === 'recipient' && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/50 p-4">
+          <section role="dialog" aria-modal="true" aria-labelledby="received-notification-title" className="w-full max-w-lg rounded-xl border border-stone-200 bg-white p-5 shadow-2xl sm:p-6">
+            <p className="text-sm font-semibold text-emerald-800">New collection received</p>
+            <h2 id="received-notification-title" className="mt-1 text-xl font-semibold">Someone shared a collection with you</h2>
+            <ul className="mt-4 divide-y divide-stone-200">
+              {notifications.map((notification) => (
+                <li key={notification.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <span>
+                    <strong className="block">{notification.collection.name}</strong>
+                    <span className="mt-1 block text-sm text-slate-600">Sent to you from {notification.sender.name}</span>
+                  </span>
+                  <button type="button" onClick={() => { void markNotificationRead(notification); importReceived(notification) }} className="min-h-10 shrink-0 rounded-md bg-emerald-800 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-900">Review collection</button>
+                </li>
+              ))}
+            </ul>
+            <button type="button" onClick={() => void dismissNotifications()} className="mt-2 min-h-10 rounded-md border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-50">Dismiss</button>
+          </section>
+        </div>
       )}
 
       <QrShareDialog

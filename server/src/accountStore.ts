@@ -119,6 +119,16 @@ export function createAccountStore() {
      FROM transfers t JOIN accounts a ON a.id = t.sender_id
      WHERE t.recipient_id = ? ORDER BY t.sent_at DESC`,
   )
+  const listUnreadRows = database.prepare(
+    `SELECT t.id, t.payload, t.sent_at, a.id AS sender_id, a.name AS sender_name,
+      a.email AS sender_email, a.kiwi_id AS sender_kiwi_id, a.role AS sender_role,
+      a.created_at AS sender_created_at
+     FROM transfers t JOIN accounts a ON a.id = t.sender_id
+     WHERE t.recipient_id = ? AND t.read_at IS NULL ORDER BY t.sent_at DESC`,
+  )
+  const markTransferReadStatement = database.prepare(
+    'UPDATE transfers SET read_at = ? WHERE id = ? AND recipient_id = ?',
+  )
   const getReceivedRow = database.prepare(
     `SELECT t.id, t.payload, t.sent_at, a.id AS sender_id, a.name AS sender_name,
       a.email AS sender_email, a.kiwi_id AS sender_kiwi_id, a.role AS sender_role,
@@ -214,9 +224,19 @@ export function createAccountStore() {
       if (account.role !== 'recipient') return []
       return (listReceivedRows.all(account.id) as Record<string, unknown>[]).map(toReceivedTransfer)
     },
+    listUnread(account: AccountProfile): ReceivedTransfer[] {
+      if (account.role !== 'recipient') return []
+      return (listUnreadRows.all(account.id) as Record<string, unknown>[]).map(toReceivedTransfer)
+    },
+    markReceivedRead(account: AccountProfile, transferId: string): boolean {
+      if (account.role !== 'recipient') return false
+      const result = markTransferReadStatement.run(new Date().toISOString(), transferId, account.id)
+      return Number(result.changes) > 0
+    },
     getReceived(account: AccountProfile, transferId: string): ReceivedTransfer | null {
       if (account.role !== 'recipient') return null
       const row = getReceivedRow.get(transferId, account.id) as Record<string, unknown> | undefined
+      if (row) markTransferReadStatement.run(new Date().toISOString(), transferId, account.id)
       return row ? toReceivedTransfer(row) : null
     },
   }

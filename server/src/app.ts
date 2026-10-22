@@ -110,6 +110,19 @@ export function createApp(): Express {
   app.get('/api/transfers/received', requireAccount, (request, response) => {
     response.json({ transfers: accounts.listReceived((request as AuthRequest).account!) })
   })
+  app.get('/api/transfers/unread', requireAccount, (request, response) => {
+    response.json({ transfers: accounts.listUnread((request as AuthRequest).account!) })
+  })
+  app.post('/api/transfers/:id/read', requireAccount, (request, response) => {
+    const rawId = request.params['id']
+    const account = (request as AuthRequest).account!
+    const marked = accounts.markReceivedRead(account, typeof rawId === 'string' ? rawId : '')
+    if (!marked) {
+      response.status(404).json({ error: 'This unread transfer was not found for your recipient account.' })
+      return
+    }
+    response.json({ status: 'read' })
+  })
   app.get('/api/transfers/:id', requireAccount, (request, response) => {
     const rawId = request.params['id']
     const transfer = accounts.getReceived((request as AuthRequest).account!, typeof rawId === 'string' ? rawId : '')
