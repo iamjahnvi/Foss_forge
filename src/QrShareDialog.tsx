@@ -184,14 +184,6 @@ export function QrShareDialog({ open, onClose, manifest, filename, qrPayload }: 
           </div>
         </div>
 
-        <details className="border-t border-stone-200 px-5 py-4 sm:px-6">
-          <summary className="cursor-pointer text-sm font-medium text-slate-700">
-            Manifest JSON
-          </summary>
-          <pre className="mt-2 max-h-40 overflow-auto rounded-md bg-stone-50 p-3 text-xs leading-5 text-slate-700">
-            {shareText}
-          </pre>
-        </details>
       </div>
     </div>
   )

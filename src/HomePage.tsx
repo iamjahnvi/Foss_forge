@@ -39,7 +39,7 @@ const SENDER_STEPS = [
   },
   {
     title: 'Scan the archives you already own',
-    body: 'The browser reads the header of every ZIM file you pick and records its identity: the UUID, the format version, the article count, the size and the language. The files never leave your machine.',
+    body: 'The browser reads the header of every ZIM file you pick and records the archive identity, format version, article count, size and language. The files never leave your machine.',
   },
   {
     title: 'Build a collection',
@@ -73,7 +73,7 @@ const RECEIVER_STEPS = [
 const MANIFEST_ROWS = [
   ['id, name, description, createdAt', 'Which collection this is, and when it was made.'],
   ['resources[].id, title, language', 'What the resource is and which language it is in.'],
-  ['resources[].zimUuid', 'The identity of the archive, taken from the ZIM header.'],
+  ['Archive identity', 'Used internally to match the archive without displaying its identifier.'],
   ['resources[].zimVersion', 'The ZIM format version of the archive, for example 6.1.'],
   ['resources[].zimChecksum', 'The checksum stored inside the archive, used to prove a local copy is the same file.'],
   ['resources[].filename, sizeBytes, sourceUrl', 'A hint of what to look for and where the archive came from.'],

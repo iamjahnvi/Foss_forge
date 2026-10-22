@@ -166,7 +166,7 @@ function ResourceRow({
           <p className="mt-2 text-xs text-slate-500">
             {resource.filename ? `${resource.filename} · ` : ''}
             {typeof resource.sizeBytes === 'number' ? `${formatBytes(resource.sizeBytes)} · ` : ''}
-            {resource.zimUuid ? `UUID ${resource.zimUuid}` : 'no ZIM identity recorded'}
+            {resource.zimUuid ? 'ZIM archive identity recorded' : 'Archive identity unavailable'}
           </p>
           {showCompatibility && (
             <div className="mt-2">

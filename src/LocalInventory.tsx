@@ -141,10 +141,6 @@ export function LocalInventory({
                         <dt className="font-medium">Language:</dt>
                         <dd>{entry.language}</dd>
                       </div>
-                      <div className="flex gap-1">
-                        <dt className="font-medium">UUID:</dt>
-                        <dd className="font-mono">{entry.zimUuid}</dd>
-                      </div>
                       {entry.checksum && (
                         <div className="flex gap-1">
                           <dt className="font-medium">Checksum:</dt>
