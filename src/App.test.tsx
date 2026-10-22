@@ -115,22 +115,6 @@ describe('collections', () => {
     expect(screen.getByText(/1 resource · created/)).toBeTruthy()
   })
 
-  it('sends the collection list to the API', async () => {
-    const fetchMock = mockApi([])
-    renderApp()
-
-    await createCollection('World history')
-
-    await waitFor(() => {
-      const put = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')
-      expect(put).toBeTruthy()
-      const body = JSON.parse(String((put?.[1] as RequestInit).body)) as {
-        collections: { name: string }[]
-      }
-      expect(body.collections[0].name).toBe('World history')
-    })
-  })
-
   it('shares a collection as a QR code', async () => {
     renderApp()
 

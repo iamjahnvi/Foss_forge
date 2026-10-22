@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 480" role="img" aria-labelledby="t">
+  <title id="t">Offline libraries of ZIM archives shared between a laptop and a phone with a QR code</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ecfdf5"/><stop offset="1" stop-color="#d1fae5"/></linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#064e3b"/><stop offset="1" stop-color="#065f46"/></linearGradient>
+    <linearGradient id="book1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#059669"/></linearGradient>
+    <linearGradient id="book2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#d97706"/></linearGradient>
+    <linearGradient id="book3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#2563eb"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#064e3b" flood-opacity=".18"/></filter>
+  </defs>
+  <rect x="20" y="20" width="520" height="440" rx="40" fill="url(#bg)"/>
+  <circle cx="460" cy="90" r="70" fill="#a7f3d0" opacity=".6"/>
+  <circle cx="90" cy="400" r="54" fill="#bbf7d0" opacity=".7"/>
+  <!-- laptop -->
+  <g filter="url(#shadow)">
+    <rect x="70" y="110" width="290" height="190" rx="14" fill="#0f172a"/>
+    <rect x="82" y="122" width="266" height="166" rx="6" fill="url(#screen)"/>
+    <path d="M44 300h342l-20 26H64z" fill="#cbd5e1"/>
+    <rect x="186" y="300" width="58" height="6" rx="3" fill="#94a3b8"/>
+  </g>
+  <!-- shelf of ZIM archives on the screen -->
+  <g>
+    <rect x="102" y="150" width="34" height="112" rx="5" fill="url(#book1)"/>
+    <rect x="142" y="166" width="30" height="96" rx="5" fill="url(#book2)"/>
+    <rect x="178" y="142" width="36" height="120" rx="5" fill="url(#book3)"/>
+    <rect x="220" y="160" width="28" height="102" rx="5" fill="#f0fdf4" opacity=".9"/>
+    <g fill="#fff" opacity=".85" font-family="ui-sans-serif,system-ui" font-size="11" font-weight="700">
+      <text x="111" y="250" transform="rotate(-90 111 250)">ZIM</text>
+      <text x="149" y="250" transform="rotate(-90 149 250)">ZIM</text>
+      <text x="188" y="250" transform="rotate(-90 188 250)">ZIM</text>
+    </g>
+    <rect x="102" y="262" width="150" height="4" rx="2" fill="#a7f3d0"/>
+    <g transform="translate(270 150)">
+      <rect width="62" height="10" rx="5" fill="#a7f3d0" opacity=".9"/>
+      <rect y="20" width="48" height="8" rx="4" fill="#6ee7b7" opacity=".6"/>
+      <rect y="36" width="56" height="8" rx="4" fill="#6ee7b7" opacity=".6"/>
+      <circle cx="6" cy="70" r="6" fill="#34d399"/><rect x="18" y="66" width="40" height="8" rx="4" fill="#6ee7b7" opacity=".6"/>
+      <circle cx="6" cy="92" r="6" fill="#fbbf24"/><rect x="18" y="88" width="32" height="8" rx="4" fill="#6ee7b7" opacity=".6"/>
+    </g>
+  </g>
+  <!-- dashed transfer path -->
+  <path d="M340 240 C 400 230, 400 300, 420 310" fill="none" stroke="#059669" stroke-width="3" stroke-dasharray="6 8" stroke-linecap="round"/>
+  <!-- phone with QR -->
+  <g filter="url(#shadow)">
+    <rect x="392" y="200" width="122" height="220" rx="22" fill="#0f172a"/>
+    <rect x="402" y="214" width="102" height="192" rx="14" fill="#fff"/>
+    <rect x="440" y="219" width="26" height="5" rx="2.5" fill="#cbd5e1"/>
+  </g>
+  <g transform="translate(415 240)" fill="#0f172a">
+    <rect width="76" height="76" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+    <rect x="6" y="6" width="20" height="20" rx="3"/><rect x="10" y="10" width="12" height="12" rx="2" fill="#f8fafc"/><rect x="13" y="13" width="6" height="6"/>
+    <rect x="50" y="6" width="20" height="20" rx="3"/><rect x="54" y="10" width="12" height="12" rx="2" fill="#f8fafc"/><rect x="57" y="13" width="6" height="6"/>
+    <rect x="6" y="50" width="20" height="20" rx="3"/><rect x="10" y="54" width="12" height="12" rx="2" fill="#f8fafc"/><rect x="13" y="57" width="6" height="6"/>
+    <rect x="32" y="8" width="6" height="6"/><rect x="40" y="16" width="6" height="6"/><rect x="32" y="26" width="6" height="6"/>
+    <rect x="34" y="36" width="6" height="6"/><rect x="44" y="34" width="6" height="6"/><rect x="56" y="34" width="6" height="6"/>
+    <rect x="8" y="34" width="6" height="6"/><rect x="18" y="38" width="6" height="6"/><rect x="34" y="50" width="6" height="6"/>
+    <rect x="46" y="48" width="6" height="6"/><rect x="58" y="52" width="6" height="6"/><rect x="40" y="62" width="6" height="6"/><rect x="52" y="62" width="6" height="6"/>
+  </g>
+  <g transform="translate(415 330)">
+    <rect width="76" height="22" rx="11" fill="#d1fae5"/>
+    <path d="M14 11l5 5 9-10" fill="none" stroke="#047857" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="34" y="8" width="32" height="6" rx="3" fill="#047857" opacity=".6"/>
+  </g>
+  <rect x="415" y="362" width="76" height="8" rx="4" fill="#e2e8f0"/>
+  <rect x="415" y="376" width="52" height="8" rx="4" fill="#e2e8f0"/>
+  <!-- offline badge -->
+  <g transform="translate(70 360)" filter="url(#shadow)">
+    <rect width="176" height="48" rx="24" fill="#fff"/>
+    <circle cx="24" cy="24" r="12" fill="#d1fae5"/>
+    <path d="M18 24l4 4 8-8" fill="none" stroke="#047857" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="46" y="29" font-family="ui-sans-serif,system-ui" font-size="14" font-weight="600" fill="#0f172a">Works fully offline</text>
+  </g>
+</svg>

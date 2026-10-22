@@ -5,16 +5,11 @@ import type { Collection } from './manifest'
 export type CollectionsSyncStatus = 'loading' | 'local'
 
 export function useCollections() {
-  const [collections, setCollections] = useState<Collection[]>([])
-  const [syncStatus, setSyncStatus] = useState<CollectionsSyncStatus>('loading')
-  const savedSnapshotRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    const stored = readStoredCollections()
-    savedSnapshotRef.current = stored ? JSON.stringify(stored) : JSON.stringify([])
-    setCollections(stored ?? [])
-    setSyncStatus('local')
-  }, [])
+  // Collections live in browser storage, so they can be read synchronously
+  // when the hook first renders.
+  const [collections, setCollections] = useState<Collection[]>(() => readStoredCollections() ?? [])
+  const [syncStatus] = useState<CollectionsSyncStatus>('local')
+  const savedSnapshotRef = useRef<string | null>(JSON.stringify(collections))
 
   useEffect(() => {
     if (syncStatus === 'loading') return

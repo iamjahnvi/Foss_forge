@@ -28,3 +28,6 @@ server-data/
 *.sln
 *.sw?
 server-data/
+
+# local backups made while editing
+.backup-landing/
