@@ -53,12 +53,12 @@ function App({ transferId }: { transferId?: string } = {}) {
   const [sharedManifest, setSharedManifest] = useState<CollectionManifest | null>(null)
   const [recipients, setRecipients] = useState<RecipientProfile[]>([])
   const [received, setReceived] = useState<ReceivedTransfer[]>([])
-  const [recipientId, setRecipientId] = useState('')
+  const [recipientIds, setRecipientIds] = useState<string[]>([])
   const [transferCollectionId, setTransferCollectionId] = useState('')
   const [transferMessage, setTransferMessage] = useState('')
   const [transferError, setTransferError] = useState('')
   const [sending, setSending] = useState(false)
-  const [transferLink, setTransferLink] = useState('')
+  const [transferLinks, setTransferLinks] = useState<{ kiwiId: string; name: string; email: string; link: string }[]>([])
   const [transferQr, setTransferQr] = useState<{ manifest: CollectionManifest; link: string } | null>(null)
   const [pendingTransfer, setPendingTransfer] = useState<ReceivedTransfer | null>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -156,17 +156,30 @@ function App({ transferId }: { transferId?: string } = {}) {
   }
 
   async function handleSendCollection() {
-    if (!account || account.role !== 'sender' || !token || !recipientId || !transferCollectionId) return
+    if (!account || account.role !== 'sender' || !token || recipientIds.length === 0 || !transferCollectionId) return
     const collection = collections.find((item) => item.id === transferCollectionId)
     if (!collection) return
     setSending(true)
     setTransferError('')
     setTransferMessage('')
     try {
-      const transfer = await sendToRecipient(token, recipientId, collectionToManifest(collection))
-      const link = `${window.location.origin}${window.location.pathname}#/receive/${transfer.id}`
-      setTransferLink(link)
-      setTransferMessage(`Sent “${transfer.collection.name}” to ${recipients.find((item) => item.kiwiId === recipientId)?.name ?? 'recipient'}. Share this private link with them.`)
+      const outcomes = await Promise.allSettled(recipientIds.map(async (kiwiId) => {
+        const recipient = recipients.find((item) => item.kiwiId === kiwiId)
+        if (!recipient) throw new Error('A selected recipient is no longer available.')
+        const transfer = await sendToRecipient(token, kiwiId, collectionToManifest(collection))
+        return {
+          kiwiId,
+          name: recipient.name,
+          email: recipient.email,
+          link: `${window.location.origin}${window.location.pathname}#/receive/${transfer.id}`,
+        }
+      }))
+      const links = outcomes.flatMap((outcome) => outcome.status === 'fulfilled' ? [outcome.value] : [])
+      setTransferLinks(links)
+      const failed = outcomes.length - links.length
+      setTransferMessage(`Sent “${collection.name}” to ${links.length} recipient${links.length === 1 ? '' : 's'}.${failed ? ` ${failed} transfer${failed === 1 ? '' : 's'} could not be sent.` : ' Share each recipient’s private link with them.'}`)
+      const firstFailure = outcomes.find((outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected')
+      if (firstFailure) setTransferError(firstFailure.reason instanceof Error ? firstFailure.reason.message : 'One or more transfers failed.')
     } catch (error) {
       setTransferError(error instanceof Error ? error.message : 'Could not send this collection.')
     } finally {
@@ -174,9 +187,9 @@ function App({ transferId }: { transferId?: string } = {}) {
     }
   }
 
-  async function handleCopyTransferLink() {
+  async function handleCopyTransferLink(link: string) {
     try {
-      await navigator.clipboard.writeText(transferLink)
+      await navigator.clipboard.writeText(link)
       setTransferMessage('Transfer link copied.')
     } catch {
       setTransferError('Could not copy the link. Select and copy it from the field.')
@@ -501,12 +514,22 @@ function App({ transferId }: { transferId?: string } = {}) {
                     <h3 id="send-collection-title" className="mt-1 text-lg font-semibold">Send a collection</h3>
                     <p className="mt-1 text-sm leading-6 text-slate-600">Choose a recipient by name. The server checks the recipient account before delivering the manifest; ZIM archives stay on your device.</p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <label className="text-sm font-medium">Recipient
-                        <select value={recipientId} onChange={(event) => setRecipientId(event.target.value)} className="mt-1 block min-h-11 w-full rounded-md border border-stone-300 bg-white px-3">
-                          <option value="">Choose a recipient</option>
-                          {recipients.map((recipient) => <option key={recipient.id} value={recipient.kiwiId}>{recipient.name} · {recipient.email}</option>)}
-                        </select>
-                      </label>
+                      <div className="text-sm font-medium">Recipients
+                        <details className="relative mt-1">
+                          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between rounded-md border border-stone-300 bg-white px-3 font-normal focus-visible:outline-2 focus-visible:outline-emerald-800">
+                            {recipientIds.length ? `${recipientIds.length} recipient${recipientIds.length === 1 ? '' : 's'} selected` : 'Choose recipients'}
+                            <span aria-hidden="true" className="text-slate-500">▾</span>
+                          </summary>
+                          <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-stone-300 bg-white p-2 shadow-lg">
+                            {recipients.length ? recipients.map((recipient) => (
+                              <label key={recipient.id} className="flex cursor-pointer items-start gap-2 rounded px-2 py-2 font-normal hover:bg-emerald-50">
+                                <input type="checkbox" checked={recipientIds.includes(recipient.kiwiId)} onChange={(event) => setRecipientIds((current) => event.target.checked ? [...current, recipient.kiwiId] : current.filter((id) => id !== recipient.kiwiId))} className="mt-0.5 accent-emerald-800" />
+                                <span>{recipient.name}<span className="block text-xs text-slate-500">{recipient.email}</span></span>
+                              </label>
+                            )) : <p className="px-2 py-3 text-sm font-normal text-slate-500">No recipients available.</p>}
+                          </div>
+                        </details>
+                      </div>
                       <label className="text-sm font-medium">Collection
                         <select value={transferCollectionId} onChange={(event) => setTransferCollectionId(event.target.value)} className="mt-1 block min-h-11 w-full rounded-md border border-stone-300 bg-white px-3">
                           <option value="">Choose a collection</option>
@@ -514,7 +537,7 @@ function App({ transferId }: { transferId?: string } = {}) {
                         </select>
                       </label>
                     </div>
-                    <button type="button" disabled={!recipientId || !transferCollectionId || sending} onClick={() => void handleSendCollection()} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"><Send size={16} />{sending ? 'Sending…' : 'Send collection'}</button>
+                    <button type="button" disabled={!recipientIds.length || !transferCollectionId || sending} onClick={() => void handleSendCollection()} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"><Send size={16} />{sending ? 'Sending…' : `Send to ${recipientIds.length || 'recipients'}`}</button>
                     {recipients.length === 0 && <p className="mt-3 text-sm text-slate-500">No recipient accounts are registered yet.</p>}
                   </section>
                 )}
@@ -527,10 +550,16 @@ function App({ transferId }: { transferId?: string } = {}) {
                 )}
                 {transferError && !transferId && <p role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm">{transferError}</p>}
                 {transferMessage && <p role="status" className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm leading-6 text-emerald-900">{transferMessage}</p>}
-                {transferLink && (
-                  <div className="mb-6 max-w-2xl rounded-lg border border-stone-200 bg-stone-50 p-4">
-                    <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">Recipient-only transfer link<input readOnly value={transferLink} className="mt-2 min-h-10 w-full rounded-md border border-stone-300 bg-white px-3 text-sm" /></label>
-                    <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => void handleCopyTransferLink()} className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium">Copy link</button><button type="button" onClick={() => { const item = collections.find((entry) => entry.id === transferCollectionId); if (item) setTransferQr({ manifest: collectionToManifest(item), link: transferLink }) }} className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium"><QrCode size={16} />QR link</button>{transferCollectionId && <button type="button" onClick={() => { const item = collections.find((entry) => entry.id === transferCollectionId); if (item) handleExport(item) }} className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium"><Download size={16} />Download JSON</button>}</div>
+                {transferLinks.length > 0 && (
+                  <div className="mb-6 max-w-2xl space-y-3">
+                    {transferLinks.map((item) => (
+                      <div key={item.kiwiId} className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+                        <p className="text-sm font-semibold">Link for {item.name} <span className="font-normal text-slate-500">· {item.email}</span></p>
+                        <input aria-label={`Recipient-only link for ${item.name}`} readOnly value={item.link} className="mt-2 min-h-10 w-full rounded-md border border-stone-300 bg-white px-3 text-sm" />
+                        <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => void handleCopyTransferLink(item.link)} className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium">Copy link</button><button type="button" onClick={() => { const collection = collections.find((entry) => entry.id === transferCollectionId); if (collection) setTransferQr({ manifest: collectionToManifest(collection), link: item.link }) }} className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium"><QrCode size={16} />QR link</button></div>
+                      </div>
+                    ))}
+                    {transferCollectionId && <button type="button" onClick={() => { const item = collections.find((entry) => entry.id === transferCollectionId); if (item) handleExport(item) }} className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium"><Download size={16} />Download JSON manifest</button>}
                   </div>
                 )}
                 <input
