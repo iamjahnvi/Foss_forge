@@ -61,8 +61,8 @@ const RECEIVER_STEPS = [
     body: 'Import the JSON file, scan the QR code with the camera, or pick a picture of one. The manifest is parsed and validated before anything is saved.',
   },
   {
-    title: 'Build your local inventory',
-    body: 'Scan the ZIM files you already have. This is the list of archives that the compatibility report is checked against.',
+    title: 'Check archives on this device',
+    body: 'Choose the ZIM files you already have from the collection editor. Their metadata is used for the compatibility report; the archives stay on this device.',
   },
   {
     title: 'Read the compatibility report',

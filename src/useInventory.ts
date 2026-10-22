@@ -41,7 +41,7 @@ export function useInventory() {
     }
   }, [entries])
 
-  const scan = useCallback(async (files: File[]) => {
+  const scan = useCallback(async (files: File[]): Promise<InventoryEntry[]> => {
     setError('')
     setMessage('')
 
@@ -49,7 +49,7 @@ export function useInventory() {
     const skipped = files.length - zimFiles.length
     if (zimFiles.length === 0) {
       setError('Choose at least one .zim archive to scan.')
-      return
+      return []
     }
 
     setIsScanning(true)
@@ -83,6 +83,7 @@ export function useInventory() {
         `${scanned.length} archive${scanned.length === 1 ? '' : 's'} added to the local inventory.`,
       )
     }
+    return scanned
   }, [])
 
   const removeEntry = useCallback((entryId: string) => {

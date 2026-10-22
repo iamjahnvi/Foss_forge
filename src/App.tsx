@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
-import { BookOpen, Boxes, CircleHelp, Download, Plus, QrCode, Send, Upload, X } from 'lucide-react'
+import { BookOpen, Boxes, Download, Plus, QrCode, Send, Upload, X } from 'lucide-react'
 import { CollectionEditor } from './CollectionEditor'
 import { CompatibilityReportView } from './CompatibilityReport'
 import { buildCompatibilityReport } from './compatibility'
-import { LocalInventory } from './LocalInventory'
 import { QrScanner } from './QrScanner'
 import { QrShareDialog } from './QrShareDialog'
 import {
@@ -25,18 +24,17 @@ import {
   type CollectionManifest,
   type CollectionResource,
 } from './manifest'
-import { inventoryEntryToResource, type InventoryEntry } from './inventory'
+import { inventoryEntryToResource } from './inventory'
 import { useCollections } from './useCollections'
 import { useInventory } from './useInventory'
 import { readAccountProfile, readAccountToken } from './account'
 import { fetchReceived, fetchRecipients, fetchTransfer, sendCollection as sendToRecipient, type ReceivedTransfer, type RecipientProfile } from './transfers'
 
-type Section = 'Collections' | 'Import / Export' | 'Local Inventory'
+type Section = 'Collections' | 'Import / Export'
 
 const sections: { label: Section; icon: typeof Boxes }[] = [
   { label: 'Collections', icon: Boxes },
   { label: 'Import / Export', icon: BookOpen },
-  { label: 'Local Inventory', icon: CircleHelp },
 ]
 
 function App({ transferId }: { transferId?: string } = {}) {
@@ -252,8 +250,9 @@ function App({ transferId }: { transferId?: string } = {}) {
     }
   }
 
-  function handleAddInventoryEntry(collectionId: string, entry: InventoryEntry) {
-    handleAddResource(collectionId, inventoryEntryToResource(entry))
+  async function handleScanAndAddArchives(collectionId: string, files: File[]) {
+    const scanned = await inventory.scan(files)
+    for (const entry of scanned) handleAddResource(collectionId, inventoryEntryToResource(entry))
   }
 
   function handleUpdateResource(
@@ -367,6 +366,10 @@ function App({ transferId }: { transferId?: string } = {}) {
                 onExport={handleExport}
                 onShare={handleShare}
                 onAddResource={handleAddResource}
+                onScanArchives={(collectionId, files) => void handleScanAndAddArchives(collectionId, files)}
+                isScanningArchives={inventory.isScanning}
+                inventoryError={inventory.error}
+                inventoryMessage={inventory.message}
                 onUpdateResource={handleUpdateResource}
                 onRemoveResource={handleRemoveResource}
                 onMoveResource={handleMoveResource}
@@ -603,18 +606,7 @@ function App({ transferId }: { transferId?: string } = {}) {
                 )}
               </div>
             </section>
-          ) : (
-            <LocalInventory
-              entries={inventory.entries}
-              collections={collections}
-              isScanning={inventory.isScanning}
-              error={inventory.error}
-              message={inventory.message}
-              onScanFiles={inventory.scan}
-              onAddToCollection={handleAddInventoryEntry}
-              onRemoveEntry={inventory.removeEntry}
-            />
-          )}
+          ) : null}
         </main>
       </div>
 

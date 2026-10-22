@@ -1,14 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   ArrowDown,
   ArrowUp,
   Copy,
   Download,
+  HardDrive,
   Pencil,
   QrCode,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react'
+import { canPickFiles, pickZimFiles } from './filePicker'
 import { CompatibilityBadge } from './CompatibilityReport'
 import { matchResource, type CompatibilityEntry } from './compatibility'
 import { formatBytes, inventoryEntryToResource, type InventoryEntry } from './inventory'
@@ -24,6 +27,10 @@ type Props = {
   onExport: (collection: Collection) => void
   onShare: (collection: Collection) => void
   onAddResource: (collectionId: string, resource: CollectionResource) => void
+  onScanArchives: (collectionId: string, files: File[]) => void
+  isScanningArchives: boolean
+  inventoryError: string
+  inventoryMessage: string
   onUpdateResource: (
     collectionId: string,
     resourceId: string,
@@ -206,6 +213,10 @@ export function CollectionEditor({
   onExport,
   onShare,
   onAddResource,
+  onScanArchives,
+  isScanningArchives,
+  inventoryError,
+  inventoryMessage,
   onUpdateResource,
   onRemoveResource,
   onMoveResource,
@@ -220,6 +231,7 @@ export function CollectionEditor({
   const [manualSourceUrl, setManualSourceUrl] = useState('')
   const [manualError, setManualError] = useState('')
   const [inventoryChoice, setInventoryChoice] = useState('')
+  const archiveInputRef = useRef<HTMLInputElement>(null)
 
   const availableInventory = inventory.filter(
     (entry) => !collection.resources.some((resource) => resource.id === entry.id),
@@ -276,6 +288,21 @@ export function CollectionEditor({
     if (!entry) return
     onAddResource(collection.id, inventoryEntryToResource(entry))
     setInventoryChoice('')
+  }
+
+  async function handlePickArchives() {
+    if (!canPickFiles()) {
+      archiveInputRef.current?.click()
+      return
+    }
+    const files = await pickZimFiles()
+    if (files?.length) onScanArchives(collection.id, files)
+  }
+
+  function handleArchiveInput(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.currentTarget.files ?? [])
+    event.currentTarget.value = ''
+    if (files.length) onScanArchives(collection.id, files)
   }
 
   return (
@@ -438,8 +465,7 @@ export function CollectionEditor({
             <h4 className="text-sm font-semibold">Add from the local inventory</h4>
             {availableInventory.length === 0 ? (
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                No inventory archive is left to add. Scan more archives in the Local
-                Inventory section.
+                No previously scanned archive is left to add. Choose ZIM files below to scan and add more.
               </p>
             ) : (
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -469,6 +495,27 @@ export function CollectionEditor({
                 </button>
               </div>
             )}
+            <input
+              ref={archiveInputRef}
+              type="file"
+              accept=".zim,application/octet-stream"
+              multiple
+              aria-label="Choose ZIM archives to scan and add"
+              onChange={handleArchiveInput}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => void handlePickArchives()}
+              disabled={isScanningArchives}
+              className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-md bg-emerald-800 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-wait disabled:opacity-60"
+            >
+              {isScanningArchives ? <HardDrive aria-hidden="true" size={16} className="animate-pulse" /> : <Upload aria-hidden="true" size={16} />}
+              {isScanningArchives ? 'Reading ZIM metadata…' : 'Choose and add ZIM files'}
+            </button>
+            <p className="mt-2 text-xs leading-5 text-slate-500">Archives are read in your browser; only their metadata is added to this collection. The ZIM files are not uploaded to the server.</p>
+            {inventoryError && <p role="alert" className="mt-2 text-sm leading-5 text-red-700">{inventoryError}</p>}
+            {inventoryMessage && <p role="status" className="mt-2 text-sm leading-5 text-emerald-800">{inventoryMessage}</p>}
           </div>
 
           <form onSubmit={handleAddManual} className="rounded-lg border border-stone-200 p-4">

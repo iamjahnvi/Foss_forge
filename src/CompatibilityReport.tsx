@@ -49,9 +49,8 @@ export function CompatibilityReportView({
 
       {inventoryCount === 0 ? (
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          No local archives are scanned yet, so nothing can be matched. Scan your ZIM
-          archives in the Local Inventory section to check which of them this collection
-          needs.
+          No local archives are scanned yet, so nothing can be matched. Choose ZIM files
+          from the collection editor to check which of them this collection needs.
         </p>
       ) : (
         <p className="mt-2 text-sm leading-6 text-slate-600">
