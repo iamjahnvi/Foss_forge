@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
-import { BookOpen, Boxes, CircleHelp, Download, LogOut, Plus, QrCode, Upload, X } from 'lucide-react'
+import { BookOpen, Boxes, CircleHelp, Download, Plus, QrCode, Upload, X } from 'lucide-react'
 import { CollectionEditor } from './CollectionEditor'
 import { CompatibilityReportView } from './CompatibilityReport'
 import { buildCompatibilityReport } from './compatibility'
@@ -28,14 +28,8 @@ import {
 import { inventoryEntryToResource, type InventoryEntry } from './inventory'
 import { useCollections } from './useCollections'
 import { useInventory } from './useInventory'
-import { ROLE_LABELS, type AuthUser } from '../shared/auth'
 
 type Section = 'Collections' | 'Import / Export' | 'Local Inventory'
-
-type Props = {
-  user: AuthUser
-  onSignOut: () => void
-}
 
 const sections: { label: Section; icon: typeof Boxes }[] = [
   { label: 'Collections', icon: Boxes },
@@ -43,7 +37,7 @@ const sections: { label: Section; icon: typeof Boxes }[] = [
   { label: 'Local Inventory', icon: CircleHelp },
 ]
 
-function App({ user, onSignOut }: Props) {
+function App() {
   const [activeSection, setActiveSection] = useState<Section>('Collections')
   const [openCollectionId, setOpenCollectionId] = useState<string | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -66,7 +60,7 @@ function App({ user, onSignOut }: Props) {
     updateCollection,
     removeCollection,
     replaceCollections,
-  } = useCollections(user.id)
+  } = useCollections()
   const inventory = useInventory()
 
   // The compatibility report compares the manifest that is about to be imported
@@ -238,40 +232,18 @@ function App({ user, onSignOut }: Props) {
               </span>
               <span className="text-lg font-semibold tracking-tight">Kiwix Collections</span>
             </a>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-right">
-                <span className="block text-sm font-medium">{user.name}</span>
-                <span className="block text-xs text-slate-500">
-                  @{user.kiwiId} · {ROLE_LABELS[user.role]}
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={onSignOut}
-                className="inline-flex min-h-11 items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
-              >
-                <LogOut aria-hidden="true" size={16} />
-                Sign out
-              </button>
-            </div>
           </div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              {user.role === 'receiver'
-                ? 'Check what a shared collection asks of you.'
-                : 'Your offline knowledge, organized.'}
+              Your offline knowledge, organized.
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-              {user.role === 'receiver'
-                ? 'Import a collection, scan the archives you already own, and read the compatibility report before you start.'
-                : 'Curate and share collections of offline knowledge resources. Your collections describe resources; they do not contain or distribute ZIM files.'}
+              Curate and share collections of offline knowledge resources. Your collections describe resources; they do not contain or distribute ZIM files.
             </p>
             <p className="mt-3 w-fit rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-slate-600">
-              {syncStatus === 'api'
-                ? `Collections are stored by the local API for @${user.kiwiId}.`
-                : syncStatus === 'local'
-                  ? 'Collections are stored in this browser only.'
-                  : 'Loading collections…'}
+              {syncStatus === 'local'
+                ? 'Collections are stored in this browser only.'
+                : 'Loading collections…'}
             </p>
           </div>
         </div>

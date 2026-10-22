@@ -1,35 +1,47 @@
 import { validateCollectionList, type Collection } from './manifest'
 
-// Every account keeps its own copy, so signing in as somebody else does not
-// show their library.
-function storageKey(userId: string): string {
-  return `kiwix-collections:v1:${userId}`
-}
+const STORAGE_KEY = 'kiwix-collections:v1:local'
 
-// The browser keeps its own copy of the collection list. It is the fallback
-// when the API is unreachable, and it makes a reload keep the user's work even
-// if the API process was restarted in between.
-export function readStoredCollections(userId: string): Collection[] | null {
+export function readStoredCollections(): Collection[] | null {
   try {
-    const raw = window.localStorage.getItem(storageKey(userId))
-    if (!raw) return null
-
-    const result = validateCollectionList(JSON.parse(raw))
-    if (!result.valid) {
-      window.localStorage.removeItem(storageKey(userId))
-      return null
+    window.localStorage.removeItem('kiwix-collections:session:v1')
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const result = validateCollectionList(JSON.parse(raw))
+      if (result.valid) return result.collections
+      window.localStorage.removeItem(STORAGE_KEY)
     }
-    return result.collections
+
+    // Migrate libraries saved by the former account-based version into the
+    // single local library, keeping the collections users already created.
+    const migrated = new Map<string, Collection>()
+    const legacyKeys: string[] = []
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index)
+      if (!key?.startsWith('kiwix-collections:v1:') || key === STORAGE_KEY) continue
+      const legacyRaw = window.localStorage.getItem(key)
+      if (!legacyRaw) continue
+      const result = validateCollectionList(JSON.parse(legacyRaw))
+      if (!result.valid) continue
+      result.collections.forEach((collection) => migrated.set(collection.id, collection))
+      legacyKeys.push(key)
+    }
+    const collections = [...migrated.values()]
+    if (collections.length) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(collections))
+      legacyKeys.forEach((key) => window.localStorage.removeItem(key))
+      return collections
+    }
+    return null
   } catch {
     return null
   }
 }
 
-export function writeStoredCollections(userId: string, collections: Collection[]): void {
+export function writeStoredCollections(collections: Collection[]): void {
   try {
-    window.localStorage.setItem(storageKey(userId), JSON.stringify(collections))
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(collections))
   } catch {
-    // A full or disabled storage must not break the app; the API copy is
-    // still the source of truth when it is reachable.
+    // Disabled or full browser storage should not prevent use for this visit.
   }
 }
