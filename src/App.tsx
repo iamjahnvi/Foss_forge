@@ -304,7 +304,7 @@ function App({ transferId }: { transferId?: string } = {}) {
             {account && (
               <span className="text-right">
                 <span className="block text-sm font-medium">{account.name}</span>
-                <span className="block text-xs text-slate-500">@{account.kiwiId} · {account.role}</span>
+                <span className="block text-xs text-slate-500">{account.role}</span>
               </span>
             )}
           </div>
@@ -499,12 +499,12 @@ function App({ transferId }: { transferId?: string } = {}) {
                   <section aria-labelledby="send-collection-title" className="mb-7 rounded-xl border border-emerald-200 bg-white p-4 sm:p-5">
                     <p className="text-sm font-medium text-emerald-800">Recipient pool</p>
                     <h3 id="send-collection-title" className="mt-1 text-lg font-semibold">Send a collection</h3>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">Choose a recipient by name. Their Kiwix ID is checked by the server before the manifest is delivered; ZIM archives stay on your device.</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">Choose a recipient by name. The server checks the recipient account before delivering the manifest; ZIM archives stay on your device.</p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <label className="text-sm font-medium">Recipient
                         <select value={recipientId} onChange={(event) => setRecipientId(event.target.value)} className="mt-1 block min-h-11 w-full rounded-md border border-stone-300 bg-white px-3">
                           <option value="">Choose a recipient</option>
-                          {recipients.map((recipient) => <option key={recipient.id} value={recipient.kiwiId}>{recipient.name} · {recipient.email} · {recipient.kiwiId}</option>)}
+                          {recipients.map((recipient) => <option key={recipient.id} value={recipient.kiwiId}>{recipient.name} · {recipient.email}</option>)}
                         </select>
                       </label>
                       <label className="text-sm font-medium">Collection

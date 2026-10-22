@@ -74,10 +74,10 @@ export function SignupPage({ mode, onBack, onCreated }: Props) {
           <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
             {isLogin
               ? 'Enter the name and email on your account, then pick up where you left off.'
-              : 'Choose how you’ll use collections. We’ll generate your unique Kiwix ID when you join.'}
+              : 'Choose how you’ll use collections and create your account.'}
           </p>
           <ul className="mt-8 space-y-4 text-sm text-slate-700">
-            <li className="flex items-center gap-3"><span className="flex size-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><UserRound size={16} /></span>{isLogin ? 'Your Kiwix ID and role stay with your account' : 'Share collections with a Kiwix ID made for you'}</li>
+            <li className="flex items-center gap-3"><span className="flex size-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><UserRound size={16} /></span>{isLogin ? 'Your account role stays with your profile' : 'Send and receive collections through your account'}</li>
             <li className="flex items-center gap-3"><span className="flex size-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><ShieldCheck size={16} /></span>Your password is protected with bcrypt hashing</li>
             <li className="flex items-center gap-3"><span className="flex size-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><KeyRound size={16} /></span>No Google sign-in; use your email and password</li>
           </ul>
@@ -91,11 +91,7 @@ export function SignupPage({ mode, onBack, onCreated }: Props) {
             <div className="flex min-h-[420px] flex-col justify-center">
               <span className="flex size-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><ShieldCheck size={24} /></span>
               <h2 className="mt-5 text-2xl font-semibold tracking-tight">{isLogin ? `Welcome back, ${created.name.split(' ')[0]}.` : `You’re all set, ${created.name.split(' ')[0]}.`}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{isLogin ? 'You’re signed in. Keep your Kiwix ID handy when sharing a collection.' : 'Your account is ready. Keep your Kiwix ID handy when sharing a collection.'}</p>
-              <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                <span className="block text-xs font-semibold uppercase tracking-wider text-emerald-800">Your Kiwix ID</span>
-                <span className="mt-1 block text-xl font-semibold tracking-wide text-emerald-950">{created.kiwiId}</span>
-              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{isLogin ? 'You’re signed in and can continue using your account.' : 'Your account is ready. You can now send or receive collections.'}</p>
               <button type="button" onClick={onCreated} className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700">
                 Continue to collections <ArrowRight size={17} aria-hidden="true" />
               </button>
@@ -105,7 +101,7 @@ export function SignupPage({ mode, onBack, onCreated }: Props) {
               <div className="mb-6">
                 <p className="text-sm font-semibold text-emerald-800">{isLogin ? 'Login' : 'Create account'}</p>
                 <h2 className="mt-1 text-2xl font-semibold tracking-tight">{isLogin ? 'Sign in to your account' : 'Your details'}</h2>
-                <p className="mt-1 text-sm text-slate-500">{isLogin ? 'Use your account name and email address.' : 'A Kiwix ID will be generated after signup.'}</p>
+                <p className="mt-1 text-sm text-slate-500">{isLogin ? 'Use your account name and email address.' : 'Use your name, email address, and password.'}</p>
               </div>
               {error && <p role="alert" className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-5 text-rose-800">{error}</p>}
               <form onSubmit={(event) => void submit(event)} className="space-y-4">
