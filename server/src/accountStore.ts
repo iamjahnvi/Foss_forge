@@ -236,7 +236,6 @@ export function createAccountStore() {
     getReceived(account: AccountProfile, transferId: string): ReceivedTransfer | null {
       if (account.role !== 'recipient') return null
       const row = getReceivedRow.get(transferId, account.id) as Record<string, unknown> | undefined
-      if (row) markTransferReadStatement.run(new Date().toISOString(), transferId, account.id)
       return row ? toReceivedTransfer(row) : null
     },
   }
