@@ -1,13 +1,14 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express'
 import { createAccountStore, DuplicateEmailError } from './accountStore.js'
 import type { AccountRole } from '../../shared/account.js'
+import { validateManifestData } from '../../shared/manifest.js'
 
 // Accounts are created and verified here; the collection data itself stays in
 // the user's browser.
 export function createApp(): Express {
   const app = express()
   const accounts = createAccountStore()
-  app.use(express.json({ limit: '16kb' }))
+  app.use(express.json({ limit: '4mb' }))
   app.get('/api/health', (_request, response) => {
     response.json({ status: 'ok' })
   })
@@ -36,8 +37,8 @@ export function createApp(): Express {
     }
 
     try {
-      const user = await accounts.create({ name, email, password, role: role as AccountRole })
-      response.status(201).json({ user })
+      const result = await accounts.create({ name, email, password, role: role as AccountRole })
+      response.status(201).json(result)
     } catch (error) {
       if (error instanceof DuplicateEmailError) {
         response.status(409).json({ error: error.message })
@@ -57,15 +58,66 @@ export function createApp(): Express {
     }
 
     try {
-      const user = await accounts.authenticate(name, email, password)
-      if (!user) {
+      const result = await accounts.authenticate(name, email, password)
+      if (!result) {
         response.status(401).json({ error: 'Those name, email, and password details do not match an account.' })
         return
       }
-      response.json({ user })
+      response.json(result)
     } catch {
       response.status(500).json({ error: 'Login could not be completed. Please try again.' })
     }
+  })
+  type AuthRequest = Request & { account?: import('../../shared/account.js').AccountProfile }
+  const requireAccount = (request: Request, response: Response, next: NextFunction) => {
+    const auth = request.get('authorization') ?? ''
+    const match = /^Bearer\s+(.+)$/i.exec(auth)
+    const account = match ? accounts.userForToken(match[1]!) : null
+    if (!account) {
+      response.status(401).json({ error: 'Sign in to use recipient transfers.' })
+      return
+    }
+    ;(request as AuthRequest).account = account
+    next()
+  }
+  app.get('/api/recipients', requireAccount, (request, response) => {
+    const account = (request as AuthRequest).account!
+    if (account.role !== 'sender') {
+      response.status(403).json({ error: 'Recipient accounts cannot browse the recipient pool.' })
+      return
+    }
+    response.json({ recipients: accounts.listRecipients() })
+  })
+  app.post('/api/transfers', requireAccount, (request, response) => {
+    const account = (request as AuthRequest).account!
+    if (account.role !== 'sender') {
+      response.status(403).json({ error: 'Only sender accounts can send collections.' })
+      return
+    }
+    const body = request.body as Record<string, unknown> | null
+    const kiwiId = typeof body?.['recipientKiwiId'] === 'string' ? body['recipientKiwiId'] : ''
+    const parsed = validateManifestData(body?.['collection'])
+    if (!kiwiId.trim() || !parsed.valid) {
+      response.status(400).json({ error: parsed.valid ? 'Choose a recipient.' : `Invalid collection manifest: ${parsed.errors.join('; ')}` })
+      return
+    }
+    try {
+      response.status(201).json({ transfer: accounts.sendCollection(account, kiwiId, parsed.manifest) })
+    } catch (error) {
+      response.status(404).json({ error: error instanceof Error ? error.message : 'Recipient not found.' })
+    }
+  })
+  app.get('/api/transfers/received', requireAccount, (request, response) => {
+    response.json({ transfers: accounts.listReceived((request as AuthRequest).account!) })
+  })
+  app.get('/api/transfers/:id', requireAccount, (request, response) => {
+    const rawId = request.params['id']
+    const transfer = accounts.getReceived((request as AuthRequest).account!, typeof rawId === 'string' ? rawId : '')
+    if (!transfer) {
+      response.status(404).json({ error: 'This transfer was not found for your recipient account.' })
+      return
+    }
+    response.json({ transfer })
   })
   app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
     if (error instanceof SyntaxError && 'body' in error) {

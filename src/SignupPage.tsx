@@ -9,7 +9,7 @@ type Props = {
   onCreated: () => void
 }
 
-type SignupResult = { user: AccountProfile }
+type SignupResult = { user: AccountProfile; token: string }
 
 export function SignupPage({ mode, onBack, onCreated }: Props) {
   const isLogin = mode === 'login'
@@ -42,7 +42,7 @@ export function SignupPage({ mode, onBack, onCreated }: Props) {
         setError('error' in data && data.error ? data.error : 'Your account could not be created. Please try again.')
         return
       }
-      saveAccountProfile(data.user)
+      saveAccountProfile(data.user, data.token)
       setCreated(data.user)
     } catch {
       setError('Could not reach the account service. Refresh the page and try again.')

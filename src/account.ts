@@ -22,9 +22,22 @@ export function readAccountProfile(): AccountProfile | null {
   }
 }
 
-export function saveAccountProfile(profile: AccountProfile): void {
+export function readAccountToken(): string | null {
   try {
-    window.localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(profile))
+    const raw = window.localStorage.getItem(ACCOUNT_STORAGE_KEY)
+    if (!raw) return null
+    const value: unknown = JSON.parse(raw)
+    return typeof value === 'object' && value !== null && 'token' in value && typeof value.token === 'string'
+      ? value.token
+      : null
+  } catch {
+    return null
+  }
+}
+
+export function saveAccountProfile(profile: AccountProfile, token: string): void {
+  try {
+    window.localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify({ ...profile, token }))
   } catch {
     // Account creation can still finish when browser storage is unavailable.
   }

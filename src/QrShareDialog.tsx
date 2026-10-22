@@ -8,6 +8,7 @@ type Props = {
   onClose: () => void
   manifest: CollectionManifest
   filename: string
+  qrPayload?: string
 }
 
 type QrState = {
@@ -19,8 +20,8 @@ type QrState = {
 
 // The generated codes are tied to the manifest they were made from, so a
 // collection that changed while the dialog was open never shows a stale code.
-function useQrCodes(manifest: CollectionManifest, open: boolean) {
-  const key = `${manifest.id}:${manifest.name}:${manifest.resources.length}`
+function useQrCodes(manifest: CollectionManifest, open: boolean, qrPayload?: string) {
+  const key = `${manifest.id}:${manifest.name}:${manifest.resources.length}:${qrPayload ?? ''}`
   const [state, setState] = useState<QrState>({
     key: '',
     dataUrl: null,
@@ -31,7 +32,7 @@ function useQrCodes(manifest: CollectionManifest, open: boolean) {
   useEffect(() => {
     if (!open) return
     let cancelled = false
-    const json = serializeManifest(manifest)
+    const json = qrPayload ?? serializeManifest(manifest)
 
     Promise.all([manifestToQrDataUrl(json), manifestToQrSvgString(json)])
       .then(([dataUrl, svgString]) => {
@@ -51,7 +52,7 @@ function useQrCodes(manifest: CollectionManifest, open: boolean) {
     return () => {
       cancelled = true
     }
-  }, [key, manifest, open])
+  }, [key, manifest, open, qrPayload])
 
   if (state.key !== key) {
     return { dataUrl: null, svgString: null, error: '' }
@@ -59,9 +60,9 @@ function useQrCodes(manifest: CollectionManifest, open: boolean) {
   return { dataUrl: state.dataUrl, svgString: state.svgString, error: state.error }
 }
 
-export function QrShareDialog({ open, onClose, manifest, filename }: Props) {
+export function QrShareDialog({ open, onClose, manifest, filename, qrPayload }: Props) {
   const [copied, setCopied] = useState(false)
-  const { dataUrl, svgString, error } = useQrCodes(manifest, open)
+  const { dataUrl, svgString, error } = useQrCodes(manifest, open, qrPayload)
 
   if (!open) return null
 
@@ -114,8 +115,9 @@ export function QrShareDialog({ open, onClose, manifest, filename }: Props) {
               Share collection as a QR code
             </h2>
             <p className="mt-1 text-sm leading-5 text-slate-600">
-              The QR code encodes the full JSON manifest. Scanning it on another
-              device lets that device import the collection directly.
+              {qrPayload
+                ? 'This QR code opens the recipient-only transfer link. The recipient must sign in to their account to view and import it.'
+                : 'The QR code encodes the full JSON manifest. Scanning it on another device lets that device import the collection directly.'}
             </p>
           </div>
           <button
